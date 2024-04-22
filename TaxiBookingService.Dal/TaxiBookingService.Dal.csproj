@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GoogleMaps.LocationServices" Version="1.2.0.5" />
+    <PackageReference Include="GoogleMaps.Net" Version="1.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TaxiBookingService.API\TaxiBookingService.API.csproj" />
+    <ProjectReference Include="..\TaxiBookingService.Common\TaxiBookingService.Common.csproj" />
+  </ItemGroup>
+
+</Project>
