@@ -18,11 +18,15 @@ namespace TaxiBookingService.Dal.Profiles.DriverMapping
            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
            .ForMember(dest => dest.CountryCode, opt => opt.MapFrom(src => src.CountryCode))
            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber)).ReverseMap();
-            CreateMap<Driver, Driver>().ForMember(dest => dest.Id, opt => opt.Ignore());
+
             CreateMap<DriverTaxiDto, Taxi>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.RegistrationNumber, opt => opt.MapFrom(src => src.RegistrationNumber))
                 .ForMember(dest => dest.Color, opt => opt.MapFrom(src => src.Color)).ReverseMap();
-              }
+
+            CreateMap<DriverRatingDto, DriverRating>().ReverseMap();
+
+        }
+
     }
 }

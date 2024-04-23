@@ -13,7 +13,7 @@ namespace TaxiBookingService.API.Ride
         public int RideId { get; set; }
 
 
-        [RequiredValidationAttribute]
+        [RequiredValidation]
         public string Reason { get; set; }
     }
 }

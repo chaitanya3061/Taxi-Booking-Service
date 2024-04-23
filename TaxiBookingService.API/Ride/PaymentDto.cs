@@ -3,17 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.Ride
 {
     public class PaymentDto
     {
-        public int PaymentId { get; set; }
+        [PositiveIntegerValidation]
         public int CustomerId { get; set; }
-        public int DriverId { get; set; }
+
+        [PositiveIntegerValidation]
         public int RideId { get; set; }
-        public decimal Amount { get; set; }
-        public DateTime PaymentDate { get; set; }
+
+        [RequiredValidation]
+        public string PaymentType { get; set; }
 
     }
 }

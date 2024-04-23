@@ -3,30 +3,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TaxiBookingService.Common.Attribute;
 using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.User.Customer
 {
     public class CustomerRegisterDto
     {
-        [RequiredValidationAttribute]
+        [RequiredValidation]
         public string Name { get; set; }
 
 
-        [EmailValidationAttribute]
+        [EmailValidation]
         public string Email { get; set; }
 
 
-        [RequiredValidationAttribute]
+        [RequiredValidation]
         public string Password { get; set; }
 
 
-        [RequiredValidationAttribute]
+        [RequiredValidation]
         public string CountryCode { get; set; }
 
 
-        [PhoneNumberValidationAttribute]
+        [PhoneNumberValidation]
         public string PhoneNumber { get; set; }
     }
 }
