@@ -19,7 +19,8 @@ namespace TaxiBookingService.Dal.Profiles.CustomerMapping
           .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
           .ForMember(dest => dest.CountryCode, opt => opt.MapFrom(src => src.CountryCode))
           .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber)).ReverseMap();
-            CreateMap<Customer, Customer>().ForMember(dest => dest.Id, opt => opt.Ignore());
+
+            CreateMap<CustomerRatingDto, CustomerRating>().ReverseMap();
         }
     }
 }
