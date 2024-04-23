@@ -5,23 +5,24 @@ using System.Linq;
 using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
+using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.User.Customer
 {
     public class CustomerBookRideDto
     {
-        [LocationValidationAttribute]
+        [LocationValidation]
         public string PickupLocation { get; set; }
 
-        [LocationValidationAttribute]
-        [Compare(nameof(PickupLocation), ErrorMessage = "locations mismatch")]
+        [LocationValidation]
+        [Compare(nameof(PickupLocation), ErrorMessage = AppConstant.MismatchLocation)]
         public string DropoffLocation { get; set; }
 
-        [RequiredValidationAttribute]
+        [RequiredValidation]
         public string TaxiType { get; set; }
 
-        [RequiredValidationAttribute]
+        [RequiredValidation]
         public string PaymentType { get; set; }
     }
 }
