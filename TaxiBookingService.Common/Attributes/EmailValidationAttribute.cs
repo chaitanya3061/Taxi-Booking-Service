@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TaxiBookingService.Common.AssetManagement.Common;
 
-namespace TaxiBookingService.Common.Attribute
+namespace TaxiBookingService.Common.Attributes
 {
     public class EmailValidationAttribute : ValidationAttribute
     {
