@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TaxiBookingService.Common.AssetManagement.Common;
 
 namespace TaxiBookingService.Common.Attributes
 {
@@ -12,7 +13,7 @@ namespace TaxiBookingService.Common.Attributes
     {
         private readonly string _errorMessage;
 
-        public PhoneNumberValidationAttribute(string errorMessage = "Invalid phone number format.")
+        public PhoneNumberValidationAttribute(string errorMessage = AppConstant.InvalidPhonenumber)
         {
             _errorMessage = errorMessage;
         }
