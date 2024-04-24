@@ -17,7 +17,7 @@ namespace TaxiBookingService.Dal.Repositories
 
         }
 
-        public async Task<int> Register(CustomerRegisterServiceContracts request, byte[] passwordHash, byte[] passwordSalt)
+        public async Task<int> Register(User request, byte[] passwordHash, byte[] passwordSalt)
         {
             var user = new User
             {
@@ -43,7 +43,7 @@ namespace TaxiBookingService.Dal.Repositories
         }
         public async Task<Customer> GetById(int id)
         {
-            return await _context.Customer.FindAsync(id);
+            return await _context.Customer.Include(x=>x.User).FirstOrDefaultAsync(x=>x.Id==id);
         }
 
         public async Task<Customer> GetByEmail(string email)
@@ -75,40 +75,7 @@ namespace TaxiBookingService.Dal.Repositories
             Customer.User.TokenCreated = DateTime.MinValue;
             Customer.User.TokenExpires = DateTime.UtcNow;
         }
-        
-        public async Task<int> BookRide(decimal PickupLocationlatitude, decimal PickupLocationlongitude, decimal DropoffLocationlatitude, decimal DropoffLocationlongitude, CustomerBookServiceContracts request, int Id)
-        {
-            var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == request.TaxiType.ToLower());
-
-            var PickUpLocation = new Location
-            {
-                Longitude = PickupLocationlongitude,
-                Latitude = PickupLocationlatitude
-            };
-            var DropOffLocation = new Location
-            {
-                Longitude = DropoffLocationlongitude,
-                Latitude = DropoffLocationlatitude
-            };
-
-            var ride = new Ride
-            {
-                CustomerId = Id,
-                PickupLocation = PickUpLocation,
-                DropoffLocation = DropOffLocation,
-                TaxiTypeId = taxiType.Id,
-                RideStatusId = 1
-            };
-            _context.Ride.Add(ride);
-            await _context.SaveChangesAsync();
-            return ride.Id;
-        }
-        public async Task<List<TaxiType>> GetAllTaxiTypes()
-        {
-            return await _context.TaxiType.ToListAsync();
-        }
-
-     
+       
         public async Task Update(Customer customer)
         {
             _context.Entry(customer).State = EntityState.Modified;

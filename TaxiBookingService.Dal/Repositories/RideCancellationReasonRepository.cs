@@ -9,10 +9,10 @@ using TaxiBookingService.Dal.Interfaces;
 
 namespace TaxiBookingService.Dal.Repositories
 {
-    public class RideCancellationReasonRepository : IRideCancellationReasonRepository<RideCancellationReason>
+    public class RideCancellationReasonRepository : Repository<RideCancellationReason>,IRideCancellationReasonRepository
     {
         private readonly TaxiBookingServiceDbContext _context;
-        public RideCancellationReasonRepository(TaxiBookingServiceDbContext context)
+        public RideCancellationReasonRepository(TaxiBookingServiceDbContext context) : base(context) 
         {
                     _context = context;
         }

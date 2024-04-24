@@ -11,21 +11,22 @@ namespace TaxiBookingService.Dal.Interfaces
     {
         IDriverRepository<Driver> DriverRepository { get; }
         ICustomerRepository<Customer> CustomerRepository { get; }
+        IAdminRepository<Admin> AdminRepository { get; }
 
-        IRideRepository<Ride> RideRepository { get; }
+        IPaymentRepository PaymentRepository { get; }
+        IRideRepository RideRepository { get; }
 
-        ILocationRepository<Location> LocationRepository { get; }
-        ITariffChargeRepository<TariffCharge> TariffChargeRepository { get; }
+        ILocationRepository LocationRepository { get; }
+        ITariffChargeRepository TariffChargeRepository { get; }
 
-        IRejectedRideRepository<RejectedRide> RejectedRideRepository { get; }
+        IRejectedRideRepository RejectedRideRepository { get; }
 
-        IRideCancellationReasonRepository<RideCancellationReason> RideCancellationReasonRepository { get; }
+        IRideCancellationReasonRepository RideCancellationReasonRepository { get; }
 
-       ITaxiRepository<Taxi> TaxiRepository { get; }
+        ITaxiRepository TaxiRepository { get; }
+        ICustomerRatingRepository CustomerRatingRepository { get; }
 
-
-        //IAdminRepository<Admin> AdminRepository { get; }
-
+        IDriverRatingRepository DriverRatingRepository { get; }
 
         Task<int> SaveChangesAsync();
     }

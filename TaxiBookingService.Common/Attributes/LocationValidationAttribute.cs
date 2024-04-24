@@ -23,7 +23,7 @@ namespace TaxiBookingService.Common.Attributes
                 return new ValidationResult($"{validationContext.DisplayName} is required.");
             }
 
-            if (!Regex.IsMatch(value.ToString(), @"^[\w\s.,-]+$"))
+            if (!Regex.IsMatch(value.ToString(), @".+?"))
             {
                 return new ValidationResult(_errorMessage);
             }

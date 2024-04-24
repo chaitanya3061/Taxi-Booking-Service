@@ -14,6 +14,6 @@ namespace TaxiBookingService.Dal.Entities
         public int Id { get; set; }
 
         [Column(TypeName = "varchar(30)")]
-        public string Name { get; set; }
+        public string Status { get; set; }
     }
 }

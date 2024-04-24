@@ -9,11 +9,11 @@ using TaxiBookingService.Dal.Interfaces;
 
 namespace TaxiBookingService.Dal.Repositories
 {
-    public class TariffChargeRepository : ITariffChargeRepository<TariffCharge>
+    public class TariffChargeRepository : Repository<TariffCharge>,ITariffChargeRepository
     {
         private readonly TaxiBookingServiceDbContext _context;
 
-        public TariffChargeRepository(TaxiBookingServiceDbContext context)
+        public TariffChargeRepository(TaxiBookingServiceDbContext context) :base(context)
         {
             _context = context;
         }

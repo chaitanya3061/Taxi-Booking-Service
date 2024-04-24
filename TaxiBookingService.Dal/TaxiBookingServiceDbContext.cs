@@ -26,7 +26,7 @@ namespace TaxiBookingService.Dal
         public DbSet<RideStatus> RideStatus { get; set; }
         public DbSet<ScheduledRide> ScheduledRide { get; set; }
         public DbSet<CustomerRating> CustomerRating { get; set; }
-        DbSet<DriverRating> DriverRating { get; set; }
+        public DbSet<DriverRating> DriverRating { get; set; }
         public DbSet<TaxiType> TaxiType { get; set; }
         public DbSet<Location> Location { get; set; }
         public DbSet<RideCancellationReason> RideCancellationReason { get; set; }
@@ -165,27 +165,34 @@ namespace TaxiBookingService.Dal
             new RideStatus { Id = 4, Status = "Completed" },
             new RideStatus { Id = 5, Status = "Cancelled" }
             );
+            modelBuilder.Entity<PaymentStatus>().HasData(
+            new PaymentStatus { Id = 1, Status = "Pending" },
+            new PaymentStatus { Id = 2, Status = "Completed" }
+            );
+            modelBuilder.Entity<PaymentMethod>().HasData(
+            new PaymentMethod { Id = 1, Name = "Wallet" },
+            new PaymentMethod { Id = 2, Name = "Cash" }
+            );
             modelBuilder.Entity<TariffCharge>().HasData(
-             new TariffCharge { Id = 1, Name = "CancellationFee", Value = 5 },
-             new TariffCharge { Id = 2, Name = "PerKm", Value = 3.20m },
-             new TariffCharge { Id = 3, Name = "Basefare", Value = 32.0m },
-             new TariffCharge { Id = 4, Name = "driverCommissionRate", Value = 10 }
- );
+            new TariffCharge { Id = 1, Name = "CancellationFee", Value = 5 },
+            new TariffCharge { Id = 2, Name = "PerKm", Value = 3.20m },
+            new TariffCharge { Id = 3, Name = "Basefare", Value = 32.0m },
+            new TariffCharge { Id = 4, Name = "driverCommissionRate", Value = 10 }
+            );
             modelBuilder.Entity<RideCancellationReason>().HasData(
-        new RideCancellationReason { Id = 1, Name = "Customer changed mind", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 2, Name = "Driver unavailability", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 3, Name = "Emergency situation", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 4, Name = "Incorrect pickup location", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 5, Name = "Invalid payment method", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 6, Name = "Customer didn't show up", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 7, Name = "Driver took too long", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 8, Name = "Change in plans", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 9, Name = "Destination changed", IsValid = true, IsDeleted = false },
-        new RideCancellationReason { Id = 10, Name = "Weather conditions", IsValid = false, IsDeleted = false },
-        new RideCancellationReason { Id = 11, Name = "Traffic congestion", IsValid = false, IsDeleted = false },
-        new RideCancellationReason { Id = 12, Name = "Change in plans", IsValid = false, IsDeleted = false }
-     );
+            new RideCancellationReason { Id = 1, Name = "Customer changed mind", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 2, Name = "Driver unavailability", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 3, Name = "Emergency situation", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 4, Name = "Incorrect pickup location", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 5, Name = "Invalid payment method", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 6, Name = "Customer didn't show up", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 7, Name = "Driver took too long", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 8, Name = "Change in plans", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 9, Name = "Destination changed", IsValid = true, IsDeleted = false },
+            new RideCancellationReason { Id = 10, Name = "Weather conditions", IsValid = false, IsDeleted = false },
+            new RideCancellationReason { Id = 11, Name = "Traffic congestion", IsValid = false, IsDeleted = false },
+            new RideCancellationReason { Id = 12, Name = "Change in plans", IsValid = false, IsDeleted = false }
+        );
         }
     }
-
 }

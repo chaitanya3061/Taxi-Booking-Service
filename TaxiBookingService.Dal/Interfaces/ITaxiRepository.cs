@@ -8,11 +8,9 @@ using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Interfaces
 {
-    public interface ITaxiRepository<T>
+    public interface ITaxiRepository :IRepository<Taxi>
     {
-        Task<int> AddTaxi(DriverTaxiServiceContracts asset, int Id);
-        Task UpdateTaxi(int taxiId, DriverTaxiServiceContracts taxi);
-        Task<T> GetTaxiById(int TaxiId);
-        Task<T> GetTaxiByDriverId(int DriverId);
+        Task<Taxi> GetTaxiByDriverId(int DriverId);
+        Task<int> AddTaxi(DriverTaxiDto request, int driverId);
     }
 }

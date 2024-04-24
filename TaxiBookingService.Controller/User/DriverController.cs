@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net;
 using System.Security.Authentication;
+using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
 //using TaxiBookingService.Common.Enums;
@@ -19,21 +20,21 @@ namespace TaxiBookingService.Controller.User
 
     public class DriverController : ControllerBase
     {
-        private readonly IDriverLogic<Driver> _AccountLogic;
+        private readonly IDriverLogic<Driver> _DriverLogic;
         private readonly ILoggerAdapter _logger;
 
-        public DriverController(IDriverLogic<Driver> AccountService, ILoggerAdapter logger)
+        public DriverController(IDriverLogic<Driver> DriverService, ILoggerAdapter logger)
         {
-            _AccountLogic = AccountService;
+            _DriverLogic = DriverService;
             _logger = logger;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult> Register(DriverRegisterServiceContracts request)
+        public async Task<ActionResult> Register(DriverRegisterDto request)
         {
             try
             {
-                var userId = await _AccountLogic.Register(request);
+                var userId = await _DriverLogic.Register(request);
                 _logger.LogInformation(AppConstant.RegistrationSuccess);
                 return Ok($"{AppConstant.RegistrationSuccess} id: {userId}");
             }
@@ -45,11 +46,11 @@ namespace TaxiBookingService.Controller.User
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult> Login(DriverLoginServiceContracts request)
+        public async Task<ActionResult> Login(DriverLoginDto request)
         {
             try
             {
-                var result = await _AccountLogic.Login(request);
+                var result = await _DriverLogic.Login(request);
                 _logger.LogInformation($"{AppConstant.LoginSuccess} {request.Email}");
                 return Ok(result);
             }
@@ -70,7 +71,7 @@ namespace TaxiBookingService.Controller.User
         {
             try
             {
-                var result = await _AccountLogic.RefreshToken();
+                var result = await _DriverLogic.RefreshToken();
                 _logger.LogInformation(AppConstant.TokenRefreshSuccess);
                 return Ok(result);
             }
@@ -96,7 +97,7 @@ namespace TaxiBookingService.Controller.User
         {
             try
             {
-                await _AccountLogic.Logout();
+                await _DriverLogic.Logout();
                 _logger.LogInformation(AppConstant.LogoutSuccess);
                 return Ok(AppConstant.LogoutSuccess);
             }
@@ -108,12 +109,12 @@ namespace TaxiBookingService.Controller.User
         }
 
         [HttpPost("addtaxi")]
-        public async Task<ActionResult<int>> AddTaxi(DriverTaxiServiceContracts taxi)
+        public async Task<ActionResult<int>> AddTaxi(DriverTaxiDto taxi)
         {
             try
             {
-                var addedTaxiId = await _AccountLogic.AddTaxi(taxi);
-                _logger.LogInformation($"{AppConstant.AssetAddedSuccess}. taxi ID: {addedTaxiId}");
+                var addedTaxiId = await _DriverLogic.AddTaxi(taxi);
+                _logger.LogInformation($"{AppConstant.IssuedSuccess}. taxi ID: {addedTaxiId}");
                 return Ok(addedTaxiId);
             }
             catch (Exception ex)
@@ -122,32 +123,13 @@ namespace TaxiBookingService.Controller.User
                 return BadRequest();
             }
         }
-
-        [HttpPut("updatetaxi/{taxiId}")]
-        public async Task<IActionResult> UpdateTaxi(int taxiId, DriverTaxiServiceContracts taxi)
-        {
-            try
-            {
-                await _AccountLogic.UpdateTaxi(taxiId, taxi);
-                _logger.LogInformation($"{AppConstant.Update}. taxi ID: {taxiId}");
-                return Ok($"{AppConstant.Update}. taxi ID: {taxiId}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
-                return BadRequest();
-            }
-        }
-
-    
-
       
         [HttpPatch("accept/{rideId}")]
         public async Task<IActionResult> Accept(int driverId,int rideId)
         {
             try
             {
-                var results = await _AccountLogic.Accept(driverId,rideId);
+                var results = await _DriverLogic.Accept(driverId,rideId);
                 return Ok(results);
             }
             catch (Exception ex)
@@ -158,11 +140,11 @@ namespace TaxiBookingService.Controller.User
         }
 
         [HttpPatch("decline/{rideId}")]
-        public async Task<IActionResult> Decline(int driverId, int rideId)
+        public async Task<IActionResult> Decline(DriverDeclineDto request)
         {
             try
             {
-                await _AccountLogic.Decline(driverId, rideId);
+                await _DriverLogic.Decline(request);
                 return Ok(AppConstant.Declined);
             }
             catch (Exception ex)
@@ -177,7 +159,7 @@ namespace TaxiBookingService.Controller.User
         {
             try
             {
-                await _AccountLogic.StartRide(rideId);
+                await _DriverLogic.StartRide(rideId);
                 return Ok(AppConstant.RideStarted);
             }
             catch (Exception ex)
@@ -192,7 +174,7 @@ namespace TaxiBookingService.Controller.User
         {
             try
             {
-                var fare=await _AccountLogic.EndRide(rideId);
+                var fare=await _DriverLogic.EndRide(rideId);
                 return Ok($"{AppConstant.RideEnded} fare: {fare}" );
             }
             catch (Exception ex)
@@ -206,8 +188,13 @@ namespace TaxiBookingService.Controller.User
         {
             try
             {
-                await _AccountLogic.CancelRide(rideId,reason);
+                await _DriverLogic.CancelRide(rideId,reason);
                 return Ok($"{AppConstant.DriverCancelled}");
+            }
+            catch(CannotCancel ex)
+            {
+                _logger.LogError(AppConstant.RideNotFound, ex);
+                return Conflict(AppConstant.RideNotFound);
             }
             catch (Exception ex)
             {
@@ -216,5 +203,38 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
+        [HttpPost("rating/{rideId}")]
+        public async Task<IActionResult> FeedBack(DriverRatingDto rating)
+        {
+            try
+            {
+                await _DriverLogic.FeedBack(rating);
+                return Ok($"{AppConstant.Feedback}");
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogError(AppConstant.RideNotFound, ex);
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+        [HttpGet("ridehistory")]
+        public async Task<IActionResult> RideHistory()
+        {
+            try
+            {
+                var result=await _DriverLogic.RideHistory();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
     }
 }

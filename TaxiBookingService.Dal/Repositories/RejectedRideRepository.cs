@@ -9,24 +9,13 @@ using TaxiBookingService.Dal.Interfaces;
 
 namespace TaxiBookingService.Dal.Repositories
 {
-    public class RejectedRideRepository : IRejectedRideRepository<RejectedRide>
+    public class RejectedRideRepository : Repository<RejectedRide>,IRejectedRideRepository
     {
         private readonly TaxiBookingServiceDbContext _context;
 
-        public RejectedRideRepository(TaxiBookingServiceDbContext context)
+        public RejectedRideRepository(TaxiBookingServiceDbContext context): base(context) 
         {
             _context = context;
-        }
-        public async Task<int> Add(int driverId, int rideId)
-        {
-            var rejectedride = new RejectedRide
-            {
-                DriverId= driverId,
-                RideId= rideId
-            };
-           await _context.RejectedRide.AddAsync(rejectedride);
-           await _context.SaveChangesAsync();
-            return rejectedride.Id;
         }
         public async Task<bool> HasDriverRejectedRide(int driverId, int rideId)
         {

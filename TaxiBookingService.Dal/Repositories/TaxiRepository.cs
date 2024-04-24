@@ -10,20 +10,21 @@ using TaxiBookingService.Dal.Interfaces;
 
 namespace TaxiBookingService.Dal.Repositories
 {
-    public class TaxiRepository:ITaxiRepository<Taxi>
+    public class TaxiRepository:Repository<Taxi>,ITaxiRepository
     {
         private readonly TaxiBookingServiceDbContext _context;
 
-        public TaxiRepository(TaxiBookingServiceDbContext context)
+        public TaxiRepository(TaxiBookingServiceDbContext context) : base(context) 
         {
             _context = context;
         }
+
         public async Task<Taxi> GetTaxiByDriverId(int driverId)
         {
             return await _context.Taxi.FirstOrDefaultAsync(t => t.DriverId == driverId);
         }
 
-        public async Task<int> AddTaxi(DriverTaxiServiceContracts request, int driverId)
+        public async Task<int> AddTaxi(DriverTaxiDto request, int driverId)
         {
             var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == request.TaxiType.ToLower());
             var Taxi = new Taxi
@@ -39,27 +40,22 @@ namespace TaxiBookingService.Dal.Repositories
             return Taxi.Id;
         }
 
-        public async Task<Taxi> GetTaxiById(int taxiId)
-        {
-            return await _context.Taxi.FindAsync(taxiId);
-        }
+        //public async Task UpdateTaxi(int taxiId, DriverTaxiDto taxi)
+        //{
+        //    var existingTaxi = await _context.Taxi.FindAsync(taxiId);
+        //    if (existingTaxi == null)
+        //    {
+        //        throw new Exception("Taxi not found.");
+        //    }
+        //    var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == taxi.TaxiType.ToLower());
 
-        public async Task UpdateTaxi(int taxiId, DriverTaxiServiceContracts taxi)
-        {
-            var existingTaxi = await _context.Taxi.FindAsync(taxiId);
-            if (existingTaxi == null)
-            {
-                throw new Exception("Taxi not found.");
-            }
-            var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == taxi.TaxiType.ToLower());
+        //    existingTaxi.Name = taxi.Name;
+        //    existingTaxi.RegistrationNumber = taxi.RegistrationNumber;
+        //    existingTaxi.Color = taxi.Color;
+        //    existingTaxi.TaxiTypeId = taxiType.Id;
+        //    _context.Entry(taxi).State = EntityState.Modified;
 
-            existingTaxi.Name = taxi.Name;
-            existingTaxi.RegistrationNumber = taxi.RegistrationNumber;
-            existingTaxi.Color = taxi.Color;
-            existingTaxi.TaxiTypeId = taxiType.Id;
-            _context.Entry(taxi).State = EntityState.Modified;
-
-            await _context.SaveChangesAsync();
-        }
+        //    await _context.SaveChangesAsync();
+        //}
     }
 }

@@ -17,11 +17,11 @@ namespace TaxiBookingService.Dal.Entities
         public int RideId { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-       public string Feedback { get; set; }
+        public string? Feedback { get; set; }
 
-       public float Rating { get; set; }
+        public float? Rating { get; set; }
 
-       public virtual Ride Ride { get; set; }
+        public virtual Ride Ride { get; set; }
     }
 
 }

@@ -15,15 +15,12 @@ namespace TaxiBookingService.Dal.Interfaces
     public interface ICustomerRepository<T>
     {
         Task UpdateRefreshToken(T user, RefreshToken refreshToken);
-        Task<int> Register(CustomerRegisterServiceContracts request, byte[] passwordHash, byte[] passwordSalt);
+        Task<int> Register(User request, byte[] passwordHash, byte[] passwordSalt);
         Task<T> GetByEmail(string email);
         Task<T> GetByToken(string token);
         Task<T> GetById(int id);
         Task Login(T entity);
         Task Logout(T entity);
-        Task<List<TaxiType>> GetAllTaxiTypes();
-        Task<int> BookRide(decimal PickupLocationlatitude,decimal PickupLocationlongitude,decimal DropoffLocationlatitude,decimal DropoffLocationlongitude,CustomerBookServiceContracts request, int Id);
-        Task Update(Customer customer);
-    
+        Task Update(Customer customer);    
     }
 }

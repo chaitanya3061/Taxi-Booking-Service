@@ -1,0 +1,78 @@
+﻿@model TaxiBookingService.Mvc.Models.RideRequest
+
+@{
+    ViewData["Title"] = "GetRide";
+}
+
+<h1>GetRide</h1>
+
+<h4>RideRequest</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="GetRide">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="PickupLocation" class="control-label"></label>
+                <input asp-for="PickupLocation" class="form-control" />
+                <span asp-validation-for="PickupLocation" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DropoffLocation" class="control-label"></label>
+                <input asp-for="DropoffLocation" class="form-control" />
+                <span asp-validation-for="DropoffLocation" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="TaxiType" class="control-label"></label>
+                <input asp-for="TaxiType" class="form-control" />
+                <span asp-validation-for="TaxiType" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+<div id="driver-details"></div> <!-- This is where driver details will be displayed -->
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- Include jQuery -->
+    <script>
+        // Function to fetch nearby drivers and display their details
+        function displayNearbyDrivers() {
+            // AJAX call to fetch nearby drivers
+            $.ajax({
+                url: '/api/driver/nearby', // Update the URL to match your API endpoint
+                method: 'GET',
+                success: function(response) {
+                    // Loop through each nearby driver
+                    response.forEach(function(driver) {
+                        // Display the driver details
+                        $('#driver-details').html('Driver Name: ' + driver.name + ', Location: ' + driver.location);
+
+                        // After 10 seconds, clear the displayed details
+                        setTimeout(function() {
+                            $('#driver-details').html('');
+                        }, 10000);
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching nearby drivers:', error);
+                }
+            });
+        }
+
+        // Call the function initially
+        displayNearbyDrivers();
+
+        // Call the function every 10 seconds
+        setInterval(displayNearbyDrivers, 10000);
+    </script>
+}

@@ -24,9 +24,9 @@ namespace TaxiBookingService.Common.Attributes
                 return new ValidationResult($"{validationContext.DisplayName} is required.");
             }
 
-            string licenseNumber = value.ToString();
+            string registrationNumber = value.ToString();
 
-            if (!Regex.IsMatch(licenseNumber, @"^[A-Z]{2}\s[0-9]{2}\s[A-Z]{2}\s[0-9]{4}$"));
+            if (!Regex.IsMatch(registrationNumber, @"^[A-Z]{2}\s[0-9]{2}\s[A-Z]{2}\s[0-9]{4}$"))
             {
                 return new ValidationResult(_errorMessage);
             }

@@ -13,6 +13,9 @@ namespace TaxiBookingService.Dal.Entities
         [Key]
         public int Id { get; set; }
 
+        [ForeignKey("Ride")]
+        public int RideId {  get; set; }
+
         [ForeignKey("PaymentMethod")]
         public int PaymentMethodId { get; set; }
 
@@ -24,6 +27,7 @@ namespace TaxiBookingService.Dal.Entities
 
         public decimal TotalFareAmount { get; set; }
 
+        public virtual Ride Ride { get; set; }
         public virtual PaymentMethod PaymentMethod { get; set; }
         public virtual PaymentStatus PaymentStatus { get; set;}
     }

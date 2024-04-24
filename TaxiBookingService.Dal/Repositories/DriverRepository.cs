@@ -17,7 +17,7 @@ namespace TaxiBookingService.Dal.Repositories
             _context = context;
         }
 
-        public async Task<int> Register(DriverRegisterServiceContracts request, byte[] passwordHash, byte[] passwordSalt)
+        public async Task<int> Register(DriverRegisterDto request, byte[] passwordHash, byte[] passwordSalt)
         {
             var user = new User
             {
@@ -114,7 +114,6 @@ namespace TaxiBookingService.Dal.Repositories
             var driver = await GetById(Id);
             driver.DriverStatusId = statusId;
             _context.Entry(driver).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
         }
 
         public async Task UpdateRideStatus(int driverId, int rideId)

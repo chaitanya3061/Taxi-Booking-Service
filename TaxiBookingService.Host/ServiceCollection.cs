@@ -11,6 +11,8 @@ using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
+using TaxiBookingService.Dal.Profiles.CustomerMapping;
+using TaxiBookingService.Dal.Profiles.DriverMapping;
 using TaxiBookingService.Dal.Repositories;
 using TaxiBookingService.Logic.User;
 using TaxiBookingService.Logic.User.Interfaces;
@@ -21,6 +23,8 @@ namespace TaxiBookingService.Host
     {
         public static void RegisterServices(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddAutoMapper(typeof(CustomerConfig).Assembly);
+            services.AddAutoMapper(typeof(DriverConfig).Assembly);
             services.AddControllers();
             services.AddEndpointsApiExplorer();
             services.AddAutoMapper(typeof(Program));

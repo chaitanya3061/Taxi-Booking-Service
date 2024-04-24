@@ -9,15 +9,12 @@ namespace TaxiBookingService.API.User.Driver
 {
     public class DriverTaxiDto
     {
-        [RequiredValidation]
         public string Name { get; set; }
 
-        [RegistrationNumber]
         public string RegistrationNumber { get; set; }
 
         public string Color { get; set; }
 
-        [RequiredValidation]
         public string TaxiType { get; set; } 
     }
 }

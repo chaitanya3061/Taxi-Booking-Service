@@ -7,9 +7,8 @@ using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Interfaces
 {
-    public interface ITariffChargeRepository<T>
+    public interface ITariffChargeRepository :IRepository<TariffCharge>
     {
-        Task<List<T>> GetTariffCharges();
 
     }
 }

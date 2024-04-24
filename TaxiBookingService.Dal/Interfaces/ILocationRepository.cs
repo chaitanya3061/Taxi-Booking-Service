@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Interfaces
 {
-    public interface ILocationRepository<T>
+    public interface ILocationRepository : IRepository<Location>
     {
-        Task<T> GetById(int id);
 
     }
 }

@@ -8,18 +8,13 @@ using TaxiBookingService.Dal.Interfaces;
 
 namespace TaxiBookingService.Dal.Repositories
 {
-    public class LocationRepository :ILocationRepository<Location>
+    public class LocationRepository : Repository<Location>, ILocationRepository
     {
         private readonly TaxiBookingServiceDbContext _context;
 
-        public LocationRepository(TaxiBookingServiceDbContext context)
+        public LocationRepository(TaxiBookingServiceDbContext context) : base(context)
         {
             _context = context;
-        }
-
-        public async Task<Location> GetById(int id)
-        {
-            return await _context.Location.FindAsync(id);
         }
     }
 }

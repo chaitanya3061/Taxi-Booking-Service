@@ -73,10 +73,9 @@ namespace TaxiBookingService.Dal.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Feedback")
-                        .IsRequired()
                         .HasColumnType("varchar(50)");
 
-                    b.Property<float>("Rating")
+                    b.Property<float?>("Rating")
                         .HasColumnType("real");
 
                     b.Property<int>("RideId")
@@ -134,10 +133,9 @@ namespace TaxiBookingService.Dal.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Feedback")
-                        .IsRequired()
                         .HasColumnType("varchar(50)");
 
-                    b.Property<float>("Rating")
+                    b.Property<float?>("Rating")
                         .HasColumnType("real");
 
                     b.Property<int>("RideId")
@@ -215,6 +213,9 @@ namespace TaxiBookingService.Dal.Migrations
                     b.Property<int>("PaymentStatusId")
                         .HasColumnType("int");
 
+                    b.Property<int>("RideId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("TotalFareAmount")
                         .HasColumnType("decimal(18,2)");
 
@@ -224,27 +225,12 @@ namespace TaxiBookingService.Dal.Migrations
 
                     b.HasIndex("PaymentStatusId");
 
+                    b.HasIndex("RideId");
+
                     b.ToTable("Payment");
                 });
 
             modelBuilder.Entity("TaxiBookingService.Dal.Entities.PaymentMethod", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("status")
-                        .IsRequired()
-                        .HasColumnType("varchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PaymentMethod");
-                });
-
-            modelBuilder.Entity("TaxiBookingService.Dal.Entities.PaymentStatus", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -258,7 +244,48 @@ namespace TaxiBookingService.Dal.Migrations
 
                     b.HasKey("Id");
 
+                    b.ToTable("PaymentMethod");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Wallet"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Cash"
+                        });
+                });
+
+            modelBuilder.Entity("TaxiBookingService.Dal.Entities.PaymentStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("varchar(30)");
+
+                    b.HasKey("Id");
+
                     b.ToTable("PaymentStatus");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Status = "Pending"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Status = "Completed"
+                        });
                 });
 
             modelBuilder.Entity("TaxiBookingService.Dal.Entities.RefreshToken", b =>
@@ -905,9 +932,17 @@ namespace TaxiBookingService.Dal.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("TaxiBookingService.Dal.Entities.Ride", "Ride")
+                        .WithMany()
+                        .HasForeignKey("RideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("PaymentMethod");
 
                     b.Navigation("PaymentStatus");
+
+                    b.Navigation("Ride");
                 });
 
             modelBuilder.Entity("TaxiBookingService.Dal.Entities.RejectedRide", b =>

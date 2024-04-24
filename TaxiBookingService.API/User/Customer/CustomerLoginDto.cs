@@ -9,11 +9,11 @@ namespace TaxiBookingService.API.User.Customer
 {
      public class CustomerLoginDto
     {
-        [EmailValidation]
+        //[EmailValidation]
         public string Email { get; set; }
         
 
-        [RequiredValidation]
+        //[RequiredValidation]
         public string Password { get; set; }
     }
 }

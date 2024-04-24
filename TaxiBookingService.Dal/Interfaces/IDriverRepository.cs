@@ -11,7 +11,7 @@ namespace TaxiBookingService.Dal.Interfaces
     public interface IDriverRepository<T>
     {
         Task UpdateRefreshToken(T user, RefreshToken refreshToken);
-        Task<int> Register(DriverRegisterServiceContracts request, byte[] passwordHash, byte[] passwordSalt);
+        Task<int> Register(DriverRegisterDto request, byte[] passwordHash, byte[] passwordSalt);
         Task<T> GetByEmail(string email);
         Task<T> GetByToken(string token);
         Task<T> GetById(int id);

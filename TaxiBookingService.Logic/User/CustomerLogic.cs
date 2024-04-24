@@ -1,5 +1,7 @@
-﻿using Azure.Core;
+﻿using AutoMapper;
+using Azure.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -12,9 +14,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using TaxiBookingService.API.User.Customer;
+using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Client.Geocoding.Interfaces;
 using TaxiBookingService.Common.AssetManagement.Common;
-//using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 using TaxiBookingService.Logic.User.Interfaces;
@@ -28,13 +30,17 @@ namespace TaxiBookingService.Logic.User
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IExternalHttpClient _externalApiClient;
+        
+        private readonly IMapper _mapper;
 
-        public CustomerLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IExternalHttpClient externalApiClient)
+        public CustomerLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IExternalHttpClient externalApiClient, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
             _externalApiClient = externalApiClient;
+            _mapper = mapper;
+
         }
 
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
@@ -98,24 +104,22 @@ namespace TaxiBookingService.Logic.User
             _httpContextAccessor.HttpContext.Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
         }
 
-        public async Task<int> Register(CustomerRegisterServiceContracts request)
+        public async Task<int> Register(CustomerRegisterDto request)
         {
             CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
-            var result = await _unitOfWork.CustomerRepository.Register(request, passwordHash, passwordSalt);
+            var userEntity = _mapper.Map<Dal.Entities.User>(request);
+            var result = await _unitOfWork.CustomerRepository.Register(userEntity, passwordHash, passwordSalt);
             await _unitOfWork.SaveChangesAsync();
             return result;
         }
 
-        public async Task<(string, string)> Login(CustomerLoginServiceContracts request)
+        public async Task<(string, string)> Login(CustomerLoginDto request)
         {
             var Customer = await _unitOfWork.CustomerRepository.GetByEmail(request.Email);
             if (Customer == null)
             {
                 throw new Exception(AppConstant.UserNotFound);
             }
-
-
-
             if (!VerifyPasswordHash(request.Password, Customer.User.PasswordHash, Customer.User.PasswordSalt))
             {
                 throw new AuthenticationException(AppConstant.PasswordNotFound);
@@ -174,51 +178,42 @@ namespace TaxiBookingService.Logic.User
             _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken");
         }
 
-        public async Task<int> BookRide(CustomerBookServiceContracts request)
+        public async Task<int> BookRide(CustomerBookRideDto request)
         {
             var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
             var Customer = await _unitOfWork.CustomerRepository.GetByToken(loggedInUser);
             var PickupLocation= await _externalApiClient.GetGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", request.PickupLocation);
             var DropoffLocation = await _externalApiClient.GetGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", request.DropoffLocation);
-            var result = await _unitOfWork.CustomerRepository.BookRide(PickupLocation.latitude, PickupLocation.longitude, DropoffLocation.latitude, DropoffLocation.longitude, request, Customer.Id);
-            await _unitOfWork.SaveChangesAsync();
+            var fare = await CalculateFare(PickupLocation.Latitude, PickupLocation.Longitude, DropoffLocation.Latitude, DropoffLocation.Longitude);
+            var result = await _unitOfWork.RideRepository.BookRide(PickupLocation,DropoffLocation, request, Customer.Id);
+            await _unitOfWork.PaymentRepository.CreatePayment(result,request.PaymentType,fare);
+            await _unitOfWork.SaveChangesAsync();    
             return result;
         }
 
-        public async Task<List<TaxiType>> GetAllTaxiTypes()
-        {
-            List<TaxiType> taxiTypes = await _unitOfWork.CustomerRepository.GetAllTaxiTypes();
-
-            if (taxiTypes.Count == 0)
-            {
-                throw new Exception(AppConstant.AssetNotFound);
-            }
-
-            return taxiTypes;
-        }
         public async Task CancelRide(int rideId, string reason)
         {
             var status = await _unitOfWork.RideRepository.GetStatus(rideId);
             var ride = await _unitOfWork.RideRepository.GetById(rideId);
 
-            if (status == 2)
+            if (status == 2 || status==1)
             {
                 bool isValidReason = await IsValidCancellationReason(reason);
-
                 if (!isValidReason)
                 {
-
-                    var tariff = await _unitOfWork.TariffChargeRepository.GetTariffCharges();
-
+                    var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
                     decimal CancellationFee = tariff.FirstOrDefault(t => t.Name == "CancellationFee")?.Value ?? 0m;
-                    decimal rideEarnings = await CalculateFare(rideId);
+                    decimal rideEarnings = await _unitOfWork.PaymentRepository.GetFareByRide(rideId);
                     decimal cancellationFee = rideEarnings * (CancellationFee / 100);
-
                     var customer = await _unitOfWork.CustomerRepository.GetById(ride.CustomerId);
                     customer.Customerwallet -= cancellationFee;
                     await _unitOfWork.CustomerRepository.Update(customer);
                 }
                 await _unitOfWork.RideRepository.UpdateRideStatus(rideId, 5, 2);
+            }
+            else
+            {
+                throw new CannotCancel(AppConstant.CannotCancel);
             }
         }
 
@@ -228,21 +223,14 @@ namespace TaxiBookingService.Logic.User
             return validReasons.Any(r => string.Equals(r.Name, reason, StringComparison.OrdinalIgnoreCase));
         }
 
-        public async Task<decimal> CalculateFare(int rideId)
+        public async Task<decimal> CalculateFare(decimal pickUpLat, decimal pickUpLong, decimal dropOffLat, decimal dropOffLong)
         {
-            var ride = await _unitOfWork.RideRepository.GetById(rideId);
-            var pickUpLocation = await _unitOfWork.LocationRepository.GetById(ride.PickupLocationId);
-
-            double distance = CalculateDistance(ride.PickupLocation.Latitude, ride.PickupLocation.Longitude, ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
-
-            var tariff = await _unitOfWork.TariffChargeRepository.GetTariffCharges();
-
+        
+            double distance = CalculateDistance(pickUpLat, pickUpLong, dropOffLat,dropOffLong);
+            var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
             decimal baseFare = tariff.FirstOrDefault(t => t.Name == "Basefare")?.Value ?? 0m;
-
             decimal perKmCharge = tariff.FirstOrDefault(t => t.Name == "PerKm")?.Value ?? 0m;
-
             decimal fare = baseFare + (decimal)distance * perKmCharge;
-
             return fare;
         }
 
@@ -270,6 +258,7 @@ namespace TaxiBookingService.Logic.User
         {
             return Math.PI * angle / 180.0;
         }
+
 
         public async Task<Driver> FindNearbyDriverAsync(int rideId)
         {
@@ -306,7 +295,72 @@ namespace TaxiBookingService.Logic.User
             var driver = await FindNearbyDriverAsync(id);
             await _unitOfWork.RideRepository.GetById(id);
             await _unitOfWork.DriverRepository.UpdateStatus(driver.Id, 2);
+            await _unitOfWork.RideRepository.UpdateRideStatus(id,2,1);
+            await _unitOfWork.SaveChangesAsync();
             return driver;
         }
+
+        public async Task UpdateDriverRating(int driverId)
+        {
+            var ratings = await _unitOfWork.CustomerRatingRepository.GetRatingsByDriverId(driverId);
+
+            if (ratings.Any())
+            {
+                float averageRating = ratings.Average(r=>r.Rating).Value;
+
+                var driver = await _unitOfWork.DriverRepository.GetById(driverId);
+                if (driver != null)
+                {
+                    driver.DriverRating = averageRating;
+                    await _unitOfWork.DriverRepository.Update(driver);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+            }
+        }
+
+
+        public async Task FeedBack(CustomerRatingDto Feedback)
+        {
+            var ride = await _unitOfWork.RideRepository.Exists(Feedback.RideId);
+            if (!ride)
+            {
+                throw new NotFoundException(AppConstant.RideNotFound);
+            }
+            var feedback = _mapper.Map<CustomerRating>(Feedback);
+
+            await _unitOfWork.CustomerRatingRepository.Add(feedback);
+            await _unitOfWork.SaveChangesAsync();
+            var driverId=await _unitOfWork.RideRepository.GetDriverByRideId(Feedback.RideId);
+            await UpdateDriverRating(driverId);
+        }
+        public async Task<List<CustomerRideDisplayDto>> RideHistory()
+        {
+            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
+            var customer = await _unitOfWork.CustomerRepository.GetByToken(loggedInUser);
+            var rides = await _unitOfWork.RideRepository.GetAllCustomerRides(customer.Id);
+            if (rides.Count == 0)
+            {
+                throw new NotFoundException(AppConstant.Notrides);
+            }
+            var rideHistoryDtoList = new List<CustomerRideDisplayDto>();
+            foreach (var ride in rides)
+            {
+                var pickUpAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.PickupLocation.Latitude, ride.PickupLocation.Longitude);
+                var dropoffAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
+                var rideHistoryDto = new CustomerRideDisplayDto
+                {
+                    Id = ride.Id,
+                    Driver = ride.Driver.User.Name,
+                    TaxiType = ride.TaxiType.Name,
+                    PickupLocation = pickUpAddress,
+                    DropoffLocation = dropoffAddress,
+                    StartTime = ride.StartTime,
+                    EndTime = ride.EndTime,
+                };
+                rideHistoryDtoList.Add(rideHistoryDto);
+            }
+            return rideHistoryDtoList;
+        }
+
     }
 }

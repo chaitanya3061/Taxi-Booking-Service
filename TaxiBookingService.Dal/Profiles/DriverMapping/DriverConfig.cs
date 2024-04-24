@@ -20,11 +20,19 @@ namespace TaxiBookingService.Dal.Profiles.DriverMapping
            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber)).ReverseMap();
 
             CreateMap<DriverTaxiDto, Taxi>()
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                .ForMember(dest => dest.RegistrationNumber, opt => opt.MapFrom(src => src.RegistrationNumber))
-                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => src.Color)).ReverseMap();
+               .ForMember(dest => dest.TaxiTypeId, opt => opt.Ignore())
+               .ForMember(dest => dest.CreatedAt, opt => opt.Ignore()) 
+               .ForMember(dest => dest.ModifiedAt, opt => opt.Ignore()) 
+               .ForMember(dest=>dest.TaxiTypeId,opt=>opt.Ignore())
+               .ForMember(dest => dest.DriverId, opt => opt.Ignore())
+               .ForMember(dest => dest.Name, opt => opt.MapFrom(src=>src.Name))
+               .ForMember(dest => dest.Color, opt => opt.MapFrom(src => src.Color))
+               .ForMember(dest => dest.RegistrationNumber, opt => opt.MapFrom(src => src.RegistrationNumber))
+               .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false)); 
 
             CreateMap<DriverRatingDto, DriverRating>().ReverseMap();
+            CreateMap<RejectedRide, DriverDeclineDto>().ReverseMap();
+
 
         }
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Dal;
 
 namespace TaxiBookingService.Host
@@ -29,7 +30,6 @@ namespace TaxiBookingService.Host
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
             app.MapControllers();
 
             app.Run();

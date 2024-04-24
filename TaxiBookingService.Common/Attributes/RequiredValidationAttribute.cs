@@ -12,7 +12,7 @@ namespace TaxiBookingService.Common.Attributes
         private readonly int _minLength;
         private readonly int _maxLength;
 
-        public RequiredValidationAttribute(int minLength = 3, int maxLength = 0)
+        public RequiredValidationAttribute(int minLength = 3, int maxLength = 30)
         {
             _minLength = minLength;
             _maxLength = maxLength;

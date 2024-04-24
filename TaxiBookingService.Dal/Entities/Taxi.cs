@@ -36,7 +36,6 @@ namespace TaxiBookingService.Dal.Entities
         [Column(TypeName = "datetime2")]
         public DateTime? ModifiedAt { get; set; }
 
-        
         public bool IsDeleted { get; set; }
 
         public Driver Driver { get; set; }

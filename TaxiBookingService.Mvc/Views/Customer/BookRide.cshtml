@@ -1,0 +1,43 @@
+﻿@model TaxiBookingService.API.User.Customer.CustomerBookRideDto
+
+@{
+    ViewData["Title"] = "BookRide";
+}
+
+<h1>BookRide</h1>
+
+<h4>CustomerBookServiceContracts</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="BookRide">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="PickupLocation" class="control-label"></label>
+                <input asp-for="PickupLocation" class="form-control" />
+                <span asp-validation-for="PickupLocation" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DropoffLocation" class="control-label"></label>
+                <input asp-for="DropoffLocation" class="form-control" />
+                <span asp-validation-for="DropoffLocation" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="TaxiType" class="control-label"></label>
+                <input asp-for="TaxiType" class="form-control" />
+                <span asp-validation-for="TaxiType" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

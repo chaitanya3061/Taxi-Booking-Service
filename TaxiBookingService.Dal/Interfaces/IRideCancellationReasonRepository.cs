@@ -7,9 +7,8 @@ using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Interfaces
 {
-    public interface IRideCancellationReasonRepository<T>
+    public interface IRideCancellationReasonRepository :IRepository<RideCancellationReason>
     {
-        Task<List<T>> GetAllValidReasons();
-
+        Task<List<RideCancellationReason>> GetAllValidReasons();
     }
 }

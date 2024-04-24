@@ -26,5 +26,22 @@ namespace TaxiBookingService.Common
             {
             }
         }
+        public class NotFoundException : Exception
+        {
+            public NotFoundException(string message) : base(message)
+            {
+
+
+            }
+        }
+        public class CannotCancel : Exception
+        {
+            public CannotCancel(string message) : base(message)
+            {
+
+
+            }
+        }
+
     }
 }

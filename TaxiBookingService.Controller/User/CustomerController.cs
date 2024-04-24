@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Security.Authentication;
 using TaxiBookingService.API.User.Customer;
+using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
 //using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal.Entities;
+using TaxiBookingService.Logic.User;
 using TaxiBookingService.Logic.User.Interfaces;
 using static TaxiBookingService.Common.CustomException;
 
@@ -27,7 +29,7 @@ namespace TaxiBookingService.Controller.User
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult> Register(CustomerRegisterServiceContracts request)
+        public async Task<ActionResult> Register(CustomerRegisterDto request)
         {
             try
             {
@@ -43,7 +45,7 @@ namespace TaxiBookingService.Controller.User
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult> Login(CustomerLoginServiceContracts request)
+        public async Task<ActionResult> Login(CustomerLoginDto request)
         {
             try
             {
@@ -97,23 +99,10 @@ namespace TaxiBookingService.Controller.User
 
         }
 
-        [HttpGet("getalltaxitypes")]
-        public async Task<IActionResult> GetAllTaxiTypes()
-        {
-            try
-            {
-                var results = await _CustomerLogic.GetAllTaxiTypes();
-                return Ok(results);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-        }
+
         //[Authorize(Roles = "Customer")]
         [HttpPost("bookride")]
-        public async Task<IActionResult> BookRide(CustomerBookServiceContracts request)
+        public async Task<IActionResult> BookRide(CustomerBookRideDto request)
         {
             try
             {
@@ -168,6 +157,61 @@ namespace TaxiBookingService.Controller.User
             {
                 var results = await _CustomerLogic.GetDriverAsync(rideId);
                 return Ok(results);
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogError(AppConstant.NodriversFound, ex);
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+        [HttpPost("rating/{rideId}")]
+        public async Task<IActionResult> FeedBack(CustomerRatingDto rating)
+        {
+            try
+            {
+                await _CustomerLogic.FeedBack(rating);
+                return Ok($"{AppConstant.Feedback}");
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogError(AppConstant.RideNotFound, ex);
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+        [HttpGet("ridehistory")]
+        public async Task<IActionResult> RideHistory()
+        {
+            try
+            {
+                var result = await _CustomerLogic.RideHistory();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+        [HttpGet("updatedropOffLocation")]
+        public async Task<IActionResult> UpdateDropOffLocation()
+        {
+            try
+            {
+                var result = await _CustomerLogic.UpdateDropOffLocation();
+                return Ok(result);
             }
             catch (Exception ex)
             {
