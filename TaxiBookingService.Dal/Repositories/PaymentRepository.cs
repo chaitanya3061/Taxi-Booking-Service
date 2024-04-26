@@ -24,11 +24,9 @@ namespace TaxiBookingService.Dal.Repositories
             return await _context.PaymentMethod.FirstOrDefaultAsync(p => p.Name.ToLower() == paymentMethodName.ToLower());
         }
 
-        public async Task<decimal> GetFareByRide(int rideId)
+        public async Task<Payment> GetByRide(int rideId)
         {
-
-            var payment = await _context.Payment.FirstOrDefaultAsync(p => p.RideId == rideId).;
-            return payment.TotalFareAmount;
+            return await _context.Payment.FirstOrDefaultAsync(p => p.RideId == rideId);
         }
 
         public async Task<int> CreatePayment(int rideId, string type , decimal fare)

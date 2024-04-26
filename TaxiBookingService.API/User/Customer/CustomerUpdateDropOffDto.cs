@@ -5,14 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using TaxiBookingService.Common.Attributes;
 
-namespace TaxiBookingService.API.User.Driver
+namespace TaxiBookingService.API.User.Customer
 {
-    public class DriverDeclineDto
+    public class CustomerUpdateDropOffDto
     {
         [PositiveIntegerValidation]
         public int RideId { get; set; }
 
-        [PositiveIntegerValidation]
-        public int DriverId { get; set; }
+        [LocationValidation]
+        public string DropOffLocation { get; set; }
     }
 }

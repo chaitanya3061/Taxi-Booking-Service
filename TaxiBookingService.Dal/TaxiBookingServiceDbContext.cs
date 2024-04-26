@@ -1,4 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+
+using System.Text;
+
 //using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Dal.Entities;
 
@@ -6,9 +11,11 @@ namespace TaxiBookingService.Dal
 {
     public class TaxiBookingServiceDbContext : DbContext
     {
-        public TaxiBookingServiceDbContext(DbContextOptions<TaxiBookingServiceDbContext> options)
+        private readonly IConfiguration _configuration;
+        public TaxiBookingServiceDbContext(DbContextOptions<TaxiBookingServiceDbContext> options, IConfiguration configuration)
           : base(options)
         {
+            _configuration = configuration;
         }
         public DbSet<UserLocation> UserLocation { get; set; }
         public DbSet<Role> Role { get; set; }
@@ -144,6 +151,7 @@ namespace TaxiBookingService.Dal
             .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
 
+
             modelBuilder.Entity<Role>().HasData(
               new Role { Id = 1, Name = "Admin" },
               new Role { Id = 2, Name = "Customer" },
@@ -193,6 +201,30 @@ namespace TaxiBookingService.Dal
             new RideCancellationReason { Id = 11, Name = "Traffic congestion", IsValid = false, IsDeleted = false },
             new RideCancellationReason { Id = 12, Name = "Change in plans", IsValid = false, IsDeleted = false }
         );
+            var name = _configuration["AdminCredentials:Name"];
+            var email = _configuration["AdminCredentials:Email"];
+            var password = _configuration["AdminCredentials:Password"];
+            var countryCode = _configuration["AdminCredentials:CountryCode"];
+            var phoneNumber = _configuration["AdminCredentials:PhoneNumber"];
+            using var hmac = new HMACSHA512();
+            modelBuilder.Entity<User>().HasData(
+                new User
+                {
+                    Id = 101,
+                    Name = name,
+                    Email = email,
+                    PasswordSalt = hmac.Key,
+                    PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password)),
+                    CountryCode = countryCode,
+                    PhoneNumber =phoneNumber,
+                    RoleId = 3,
+                    CreatedAt = DateTime.UtcNow,
+                }
+                );
+            modelBuilder.Entity<Admin>().HasData(
+                new Admin { Id = 3, UserId = 101 }
+                );
+
         }
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net;
 using System.Security.Authentication;
+using System.Text.Json;
 using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
@@ -114,7 +115,7 @@ namespace TaxiBookingService.Controller.User
             try
             {
                 var addedTaxiId = await _DriverLogic.AddTaxi(taxi);
-                _logger.LogInformation($"{AppConstant.IssuedSuccess}. taxi ID: {addedTaxiId}");
+                _logger.LogInformation($"{AppConstant.TaxiAdded}. taxi ID: {addedTaxiId}");
                 return Ok(addedTaxiId);
             }
             catch (Exception ex)
@@ -125,11 +126,11 @@ namespace TaxiBookingService.Controller.User
         }
       
         [HttpPatch("accept/{rideId}")]
-        public async Task<IActionResult> Accept(int driverId,int rideId)
+        public async Task<IActionResult> Accept(int rideId)
         {
             try
             {
-                var results = await _DriverLogic.Accept(driverId,rideId);
+                var results = await _DriverLogic.Accept(rideId);
                 return Ok(results);
             }
             catch (Exception ex)
@@ -140,11 +141,11 @@ namespace TaxiBookingService.Controller.User
         }
 
         [HttpPatch("decline/{rideId}")]
-        public async Task<IActionResult> Decline(DriverDeclineDto request)
+        public async Task<IActionResult> Decline(int rideId)
         {
             try
             {
-                await _DriverLogic.Decline(request);
+                await _DriverLogic.Decline(rideId);
                 return Ok(AppConstant.Declined);
             }
             catch (Exception ex)
@@ -222,12 +223,29 @@ namespace TaxiBookingService.Controller.User
                 return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
             }
         }
+
         [HttpGet("ridehistory")]
         public async Task<IActionResult> RideHistory()
         {
             try
             {
                 var result=await _DriverLogic.RideHistory();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+
+        [HttpGet("GetRide")]
+        public async Task<IActionResult> GetRide()
+        {
+            try
+            {
+                var result = await _DriverLogic.GetRide();
                 return Ok(result);
             }
             catch (Exception ex)

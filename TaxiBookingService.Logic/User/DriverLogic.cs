@@ -1,6 +1,4 @@
-﻿using Azure;
-using GoogleMaps.LocationServices;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -24,6 +22,8 @@ using AutoMapper;
 using TaxiBookingService.API.Ride;
 using TaxiBookingService.Client.Geocoding.Interfaces;
 using Azure.Core;
+using System.Net.Http;
+using System.Text.Json;
 
 namespace TaxiBookingService.Logic.User
 {
@@ -34,8 +34,9 @@ namespace TaxiBookingService.Logic.User
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IExternalHttpClient _externalApiClient;
+        private readonly IRideLogic _rideLogic;
 
-        public DriverLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IMapper mapper, IExternalHttpClient externalApiClient
+        public DriverLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IMapper mapper, IExternalHttpClient externalApiClient,IRideLogic rideLogic
 )
         {
             _unitOfWork = unitOfWork;
@@ -43,6 +44,7 @@ namespace TaxiBookingService.Logic.User
             _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
             _externalApiClient = externalApiClient;
+            _rideLogic = rideLogic;
         }
 
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
@@ -227,23 +229,13 @@ namespace TaxiBookingService.Logic.User
 
 
 
-        public async Task<string> Accept(int driverId, int rideId)
+        public async Task<string> Accept(int rideId)
         {
-
-            await _unitOfWork.RideRepository.UpdateRideStatus(rideId,3,2);
-            var driver = await _unitOfWork.DriverRepository.GetById(driverId);
-            var fare = await CalculateFare(rideId);
-           
-            var taxi = await _unitOfWork.TaxiRepository.GetTaxiByDriverId(driverId);
+            var exisitngride = await _unitOfWork.RideRepository.GetById(rideId);
+            exisitngride.RideStatusId = 2;
+            await _unitOfWork.RideRepository.Update(exisitngride);
             await _unitOfWork.SaveChangesAsync();
-            return $"Driver Accepted:\n" +
-                      $"- Name: {driver.User.Name}\n" +
-                      $"- Contact Number: {driver.User.PhoneNumber}\n" +
-                      $"- Taxi Type: {taxi.Name}\n" +
-                      $"- Registration Number: {taxi.RegistrationNumber}\n" +
-                      $"- Fare: {fare:F2}";
-           
-
+            return AppConstant.RideAccepted;
         }
 
         public async Task StartRide(int rideId)
@@ -255,23 +247,27 @@ namespace TaxiBookingService.Logic.User
         {
             await _unitOfWork.RideRepository.UpdateRideStatus(rideId, 4, 3);
             var ride = await _unitOfWork.RideRepository.GetById(rideId);
-            decimal fare = await CalculateFare(rideId);
+            var payment = await _unitOfWork.PaymentRepository.GetByRide(rideId);
             await _unitOfWork.DriverRepository.UpdateStatus(ride.DriverId.Value, 1);
 
             //await _unitOfWork.CustomerRepository.UpdateWallet(fare,ride.CustomerId);
             //var tariff = await _unitOfWork.TariffChargeRepository.GetTariffCharges();
             //decimal commissionPercentage = tariff.FirstOrDefault(t => t.Name == "driverCommissionRate")?.Value ?? 0m;
             //decimal commissionAmount = (fare * commissionPercentage) / 100;
-            return fare;
+            return payment.TotalFareAmount;
 
         }
 
-        public async Task Decline(DriverDeclineDto request)
+        public async Task Decline(int rideId)
         {
-            await _unitOfWork.DriverRepository.UpdateStatus(request.DriverId, 1);
-            var declineentity = _mapper.Map<RejectedRide>(request);
+            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
+            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
+            driver.DriverStatusId = 1;
+            await _unitOfWork.DriverRepository.Update(driver);
+            var declineentity=new RejectedRide {RideId=rideId,DriverId=driver.Id};
             await _unitOfWork.RejectedRideRepository.Add(declineentity);
             await _unitOfWork.SaveChangesAsync();
+            await _rideLogic.GetDriverAsync(rideId);
         }
 
         public async Task CancelRide(int rideId, string reason)
@@ -370,6 +366,28 @@ namespace TaxiBookingService.Logic.User
                 rideHistoryDtoList.Add(rideHistoryDto);
             }
             return rideHistoryDtoList;
+        }
+
+        public async Task<DriverGetRideDto> GetRide()
+        {
+
+            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
+            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
+            var ride = await _unitOfWork.RideRepository.GetRide(driver.Id);
+            if (ride == null)
+            {
+                throw new Exception("no rides found");
+            }
+            var pickUpAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.PickupLocation.Latitude, ride.PickupLocation.Longitude);
+            var dropoffAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
+            var result = new DriverGetRideDto
+            {
+                RideId=ride.Id,
+                TaxiType = ride.TaxiType.Name,
+                PickupLocation = pickUpAddress,
+                DropoffLocation = dropoffAddress,
+            };
+            return result;
         }
     }
 }

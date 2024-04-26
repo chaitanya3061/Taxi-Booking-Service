@@ -13,17 +13,17 @@ namespace TaxiBookingService.Common
         public class AppConstant
         {
             public const string CannotCancel = "cannot  cancel ride ";
-            public const string RetrievedAssetSuccess = "Asset retrived successfully";
+            public const string RideAccepted = " ride accepeted successfully";
             public const string RequestSended = "Request sended successfull";
-            public const string IssuedSuccess = "Asset issued successfully";
+            public const string ReasonAdded = "Reason Added successfully";
             public const string RideNotFound = "Ride not found";
             public const string NodriversFound = "No drivers found";
-            public const string AssetAlreadyAssigned = "Asset already assigned";
+            public const string AddedContacts = "added trusted contact";
             public const string Error = "An error occurred";
             public const string Delete = "deleted sucessfully";
             public const string Update = "updated successfully";
             public const string Feedback = "Feedback recieved successfully";
-            public const string CheckAssignment = "Not Assigned to anyone";
+            public const string AmountAdded = "Amount added sucessfully";
             public const string Notrides = "No rides found";
             public const string MismatchLocation = "locations mismatch";
             public const string InvalidDatetime = "Invalid DateTime";
@@ -50,6 +50,7 @@ namespace TaxiBookingService.Common
             public const string LogoutSuccess = "Logout successful";
             public const string TokenRefreshSuccess = "Token refreshed successfully";
             public const string RideStarted = "ride started sucessffully";
+            public const string TaxiAdded = "Taxi added succesfully";
         }
 
     }

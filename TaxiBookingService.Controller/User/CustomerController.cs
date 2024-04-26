@@ -108,7 +108,7 @@ namespace TaxiBookingService.Controller.User
             {
                 var result = await _CustomerLogic.BookRide(request);
                 _logger.LogInformation(AppConstant.RequestSended);
-                return Ok(result);
+                return Ok(AppConstant.RequestSended);
             }
             catch (Exception ex)
             {
@@ -118,6 +118,22 @@ namespace TaxiBookingService.Controller.User
 
         }
 
+        [HttpGet("getmatcheddetails/{rideId}")]
+        public async Task<IActionResult> GetMatchedDriver(int rideId)
+        {
+            try
+            {
+                var result = await _CustomerLogic.GetMatchedDriver(rideId);
+                _logger.LogInformation(AppConstant.RequestSended);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+
+        }
 
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
@@ -150,25 +166,7 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpGet("getdriver/{rideId}")]
-        public async Task<IActionResult> GetDriver(int rideId)
-        {
-            try
-            {
-                var results = await _CustomerLogic.GetDriverAsync(rideId);
-                return Ok(results);
-            }
-            catch (NotFoundException ex)
-            {
-                _logger.LogError(AppConstant.NodriversFound, ex);
-                return NotFound();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-        }
+    
 
         [HttpPost("rating/{rideId}")]
         public async Task<IActionResult> FeedBack(CustomerRatingDto rating)
@@ -205,12 +203,12 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpGet("updatedropOffLocation")]
-        public async Task<IActionResult> UpdateDropOffLocation()
+        [HttpPost("updatedropOffLocation/{rideId}")]
+        public async Task<IActionResult> UpdateDropOffLocation(CustomerUpdateDropOffDto request)
         {
             try
             {
-                var result = await _CustomerLogic.UpdateDropOffLocation();
+                var result = await _CustomerLogic.UpdateDropOffLocation(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -219,5 +217,38 @@ namespace TaxiBookingService.Controller.User
                 return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
             }
         }
+
+
+        [HttpPatch("topupwallet")]
+        public async Task<IActionResult> TopUpWallet(int amount)
+        {
+            try
+            {
+                var result = await _CustomerLogic.TopUpWallet(amount);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+        [HttpPost("addtrustedcontact")]
+        public async Task<IActionResult> AddTrustedContact(CustomerTrustedContactDto request)
+        {
+            try
+            {
+                var result = await _CustomerLogic.AddTrustedContact(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+    
     }
 }

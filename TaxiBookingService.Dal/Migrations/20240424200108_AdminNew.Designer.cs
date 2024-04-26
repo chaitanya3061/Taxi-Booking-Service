@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaxiBookingService.Dal;
 
@@ -11,9 +12,11 @@ using TaxiBookingService.Dal;
 namespace TaxiBookingService.Dal.Migrations
 {
     [DbContext(typeof(TaxiBookingServiceDbContext))]
-    partial class TaxiBookingServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240424200108_AdminNew")]
+    partial class AdminNew
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,8 +45,8 @@ namespace TaxiBookingService.Dal.Migrations
                     b.HasData(
                         new
                         {
-                            Id = 3,
-                            UserId = 101
+                            Id = 1,
+                            UserId = 100
                         });
                 });
 
@@ -232,8 +235,7 @@ namespace TaxiBookingService.Dal.Migrations
 
                     b.HasIndex("PaymentStatusId");
 
-                    b.HasIndex("RideId")
-                        .IsUnique();
+                    b.HasIndex("RideId");
 
                     b.ToTable("Payment");
                 });
@@ -838,14 +840,14 @@ namespace TaxiBookingService.Dal.Migrations
                     b.HasData(
                         new
                         {
-                            Id = 101,
+                            Id = 100,
                             CountryCode = "+91",
-                            CreatedAt = new DateTime(2024, 4, 25, 18, 12, 52, 370, DateTimeKind.Utc).AddTicks(7352),
-                            Email = "chaitu@gmail.com",
+                            CreatedAt = new DateTime(2024, 4, 24, 20, 1, 8, 492, DateTimeKind.Utc).AddTicks(1793),
+                            Email = "chaitanya@gmail.com",
                             IsDeleted = false,
-                            Name = "Chaitu",
-                            PasswordHash = new byte[] { 155, 16, 185, 148, 156, 41, 120, 121, 80, 204, 30, 233, 158, 89, 94, 68, 108, 111, 218, 155, 69, 119, 185, 17, 44, 149, 177, 234, 173, 14, 101, 44, 182, 85, 107, 168, 115, 28, 139, 82, 228, 251, 96, 25, 15, 137, 189, 84, 121, 165, 166, 201, 143, 251, 2, 86, 224, 239, 11, 46, 151, 229, 239, 215 },
-                            PasswordSalt = new byte[] { 223, 179, 25, 248, 104, 137, 197, 169, 82, 199, 144, 6, 139, 166, 47, 160, 181, 53, 207, 170, 134, 153, 192, 13, 27, 138, 241, 103, 218, 208, 58, 25, 40, 221, 26, 5, 89, 149, 135, 218, 107, 102, 238, 133, 125, 176, 25, 202, 113, 164, 233, 48, 217, 173, 68, 83, 133, 58, 176, 86, 214, 93, 29, 193, 138, 148, 200, 19, 101, 229, 31, 147, 213, 172, 91, 250, 155, 122, 246, 13, 77, 131, 183, 181, 133, 216, 120, 192, 248, 202, 223, 231, 97, 149, 8, 237, 125, 183, 215, 12, 68, 97, 56, 60, 152, 89, 102, 110, 136, 169, 138, 147, 205, 84, 165, 128, 37, 92, 196, 160, 205, 106, 157, 173, 23, 236, 30, 216 },
+                            Name = "Chaitanya",
+                            PasswordHash = new byte[] { 72, 175, 96, 180, 53, 231, 10, 5, 51, 159, 72, 194, 7, 138, 9, 79, 72, 52, 86, 169, 189, 56, 134, 0, 144, 8, 171, 60, 190, 70, 151, 30, 54, 140, 93, 93, 59, 98, 205, 75, 19, 148, 64, 138, 246, 69, 52, 77, 193, 29, 197, 190, 77, 59, 213, 38, 108, 212, 157, 245, 33, 236, 227, 154 },
+                            PasswordSalt = new byte[] { 238, 191, 185, 210, 246, 19, 145, 136, 41, 182, 58, 100, 149, 8, 248, 138, 35, 54, 149, 120, 173, 247, 210, 212, 29, 135, 144, 27, 178, 155, 207, 85, 90, 183, 165, 29, 211, 90, 80, 158, 217, 13, 213, 178, 136, 2, 46, 229, 240, 164, 245, 17, 136, 66, 138, 155, 33, 8, 16, 182, 132, 7, 23, 177, 15, 192, 84, 27, 3, 242, 218, 35, 225, 130, 48, 44, 33, 114, 142, 227, 136, 237, 219, 133, 129, 111, 104, 218, 63, 27, 124, 83, 62, 234, 221, 9, 16, 3, 214, 167, 88, 10, 96, 22, 60, 208, 79, 197, 15, 223, 107, 221, 32, 207, 54, 101, 116, 91, 166, 198, 11, 150, 48, 107, 96, 248, 58, 56 },
                             PhoneNumber = "7093605314",
                             RoleId = 3,
                             TokenCreated = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
@@ -958,8 +960,8 @@ namespace TaxiBookingService.Dal.Migrations
                         .IsRequired();
 
                     b.HasOne("TaxiBookingService.Dal.Entities.Ride", "Ride")
-                        .WithOne("Payment")
-                        .HasForeignKey("TaxiBookingService.Dal.Entities.Payment", "RideId")
+                        .WithMany()
+                        .HasForeignKey("RideId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1138,9 +1140,6 @@ namespace TaxiBookingService.Dal.Migrations
 
             modelBuilder.Entity("TaxiBookingService.Dal.Entities.Ride", b =>
                 {
-                    b.Navigation("Payment")
-                        .IsRequired();
-
                     b.Navigation("RejectedRides");
                 });
 

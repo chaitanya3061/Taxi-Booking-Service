@@ -64,7 +64,7 @@ namespace TaxiBookingService.Client.Geocoding
                 {
                     throw new Exception("No results found for the provided address.");
                 }
-                string  address = jsonResponse.results[0].address_line2;
+                string  address = jsonResponse.results[0].formatted;
                 return address;
             }
             else

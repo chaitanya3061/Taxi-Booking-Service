@@ -12,6 +12,6 @@ namespace TaxiBookingService.Dal.Interfaces
     {
         Task<int> CreatePayment(int rideId, string type, decimal fare);
         Task<PaymentMethod> GetPaymentMethod(string paymentMethodName);
-        Task<decimal> GetFareByRide(int rideId);
+        Task<Payment> GetByRide(int rideId);
     }
 }

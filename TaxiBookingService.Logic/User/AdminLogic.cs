@@ -1,163 +1,131 @@
-﻿//using Microsoft.AspNetCore.Http;
-//using Microsoft.Extensions.Configuration;
-//using Microsoft.IdentityModel.Tokens;
-//using System;
-//using System.Collections.Generic;
-//using System.IdentityModel.Tokens.Jwt;
-//using System.Security.Claims;
-//using System.Security.Cryptography;
-//using System.Text;
-//using System.Threading.Tasks;
-//using TaxiBookingService.API.User.Admin;
-//using TaxiBookingService.Common.AssetManagement.Common;
-////using TaxiBookingService.Common.Enums;
-//using TaxiBookingService.Dal.Entities;
-//using TaxiBookingService.Dal.Interfaces;
-//using TaxiBookingService.Logic.User.Interfaces;
-//using static TaxiBookingService.Common.CustomException;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+using TaxiBookingService.API.User.Admin;
+using TaxiBookingService.Common;
+using TaxiBookingService.Common.AssetManagement.Common;
+//using TaxiBookingService.Common.Enums;
+using TaxiBookingService.Dal.Entities;
+using TaxiBookingService.Dal.Interfaces;
+using TaxiBookingService.Logic.User.Interfaces;
+using static TaxiBookingService.Common.CustomException;
 
-//namespace TaxiBookingService.Logic.User
-//{
-//    public class AdminLogic : IAdminLogic<Admin>
-//    {
-//        private readonly IConfiguration _configuration;
-//        private readonly IHttpContextAccessor _httpContextAccessor;
-//        private readonly IUnitOfWork _unitOfWork;
+namespace TaxiBookingService.Logic.User
+{
+    public class AdminLogic : IAdminLogic<Admin>
+    {
+        private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        public AdminLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor,IMapper mapper)
+        {
+            _unitOfWork = unitOfWork;
+            _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
+            _mapper=mapper;
+        }
 
-//        public AdminLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
-//        {
-//            _unitOfWork = unitOfWork;
-//            _configuration = configuration;
-//            _httpContextAccessor = httpContextAccessor;
-//        }
+        private string CreateToken(Admin admin)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Email, admin.User.Email),
+                new Claim(ClaimTypes.Role, "Admin"), 
 
-//        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-//        {
-//            using (var hmac = new HMACSHA512())
-//            {
-//                passwordSalt = hmac.Key;
-//                passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-//            }
-//        }
+            };
 
-//        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
-//        {
-//            using (var hmac = new HMACSHA512(passwordSalt))
-//            {
-//                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-//                return computedHash.SequenceEqual(passwordHash);
-//            }
-//        }
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
-//        private string CreateToken(Admin Admin)
-//        {
-//            var claims = new List<Claim>
-//            {
-//                new Claim(ClaimTypes.Email, Admin.User.Email),
-//                new Claim(ClaimTypes.Role, UserRole.Admin.ToString())
-//            };
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(15),
+                signingCredentials: creds
+            );
 
-//            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
-//            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
 
-//            var token = new JwtSecurityToken(
-//                claims: claims,
-//                expires: DateTime.Now.AddMinutes(15),
-//                signingCredentials: creds
-//            );
+        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+        {
+            using (var hmac = new HMACSHA512(passwordSalt))
+            {
+                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return computedHash.SequenceEqual(passwordHash);
+            }
+        }
 
-//            return new JwtSecurityTokenHandler().WriteToken(token);
-//        }
+        public async Task<string> Login(AdminLoginDto request)
+        {
+            var admin = await _unitOfWork.AdminRepository.GetByEmail(request.Email);
+            if (admin == null)
+            {
+                throw new Exception("Invalid email or password.");
+            }
+            if (!VerifyPasswordHash(request.Password, admin.User.PasswordHash, admin.User.PasswordSalt))
+            {
+                throw new AuthenticationException(AppConstant.PasswordNotFound);
+            }
+            string token = CreateToken(admin);
+            _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);
+            await _unitOfWork.SaveChangesAsync();
+            return token;
+        }
 
-//        private RefreshToken GenerateRefreshToken()
-//        {
-//            return new RefreshToken
-//            {
-//                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-//                Expires = DateTime.UtcNow.AddDays(1)
-//            };
-//        }
+        public async Task Logout()
+        {
+          _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken");
+        }
 
-//        private async Task SetRefreshToken(Admin Admin, RefreshToken newRefreshToken)
-//        {
-//            await _unitOfWork.AdminRepository.UpdateRefreshToken(Admin, newRefreshToken);
+        public async Task<int> AddCancellationReason(AdminManageReasonDto request)
+        {
+            var reasonentity=_mapper.Map<RideCancellationReason>(request);
+            await _unitOfWork.RideCancellationReasonRepository.Add(reasonentity);
+            await _unitOfWork.SaveChangesAsync();
+            return reasonentity.Id;
+        }
 
-//            var cookieOptions = new CookieOptions
-//            {
-//                HttpOnly = true,
-//                Expires = newRefreshToken.Expires,
-//            };
+        public async Task<bool> DeleteCancellationReason(int Id)
+        {
+            var exisitingreason=await _unitOfWork.RideCancellationReasonRepository.GetById(Id);
+            await _unitOfWork.RideCancellationReasonRepository.Delete(exisitingreason);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
 
-//            _httpContextAccessor.HttpContext.Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
-//        }
+        public async Task<int> UpdateCancellationReason(AdminManageReasonDto request,int Id)
+        {
+            var exisitingreason = await _unitOfWork.RideCancellationReasonRepository.GetById(Id);
+            _mapper.Map(request, exisitingreason);
+            await _unitOfWork.RideCancellationReasonRepository.Update(exisitingreason);
+            await _unitOfWork.SaveChangesAsync();
+            return exisitingreason.Id;
+        }
 
+        public async Task<bool> DeleteUser(int Id)
+        {
+            var exisitingUser = await _unitOfWork.UserRepository.GetById(Id);
+            await _unitOfWork.UserRepository.Delete(exisitingUser);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
 
-//        public async Task<string> Login(AdminLoginServiceContracts request)
-//        {
-//            var Admin = await _unitOfWork.AdminRepository.GetByEmail(request.Email);
-//            if (Admin == null)
-//            {
-//                throw new Exception(AppConstant.UserNotFound);
-//            }
-
-
-
-//            if (!VerifyPasswordHash(request.Password, Admin.User.PasswordHash, Admin.User.PasswordSalt))
-//            {
-//                throw new AuthenticationException(AppConstant.PasswordNotFound);
-//            }
-
-//            await _unitOfWork.AdminRepository.Login(Admin);
-//            await _unitOfWork.SaveChangesAsync();
-
-//            string token = CreateToken(Admin);
-//            _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);
-
-//            var refreshToken = GenerateRefreshToken();
-//            await SetRefreshToken(Admin, refreshToken);
-//            await _unitOfWork.SaveChangesAsync();
-
-//            return token;
-//        }
-
-//        public async Task<string> RefreshToken()
-//        {
-//            var refreshToken = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-//            var Admin = await _unitOfWork.AdminRepository.GetByToken(refreshToken);
-
-//            if (Admin == null)
-//            {
-//                throw new InvalidTokenException(AppConstant.InvalidToken);
-//            }
-//            else if (Admin.User.TokenExpires <= DateTime.Now)
-//            {
-//                throw new TokenExpiredException(AppConstant.TokenExpired);
-//            }
-
-//            string token = CreateToken(Admin);
-//            _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);
-
-//            var newRefreshToken = GenerateRefreshToken();
-//            await SetRefreshToken(Admin, newRefreshToken);
-//            await _unitOfWork.SaveChangesAsync();
-
-//            return token;
-//        }
-
-//        public async Task Logout()
-//        {
-//            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-//            var Admin = await _unitOfWork.AdminRepository.GetByToken(loggedInUser);
-//            if (Admin == null)
-//            {
-//                throw new Exception(AppConstant.UserNotFound);
-//            }
-
-//            await _unitOfWork.AdminRepository.Logout(Admin);
-//            await _unitOfWork.SaveChangesAsync();
-
-//            _httpContextAccessor.HttpContext.Response.Cookies.Delete("refreshToken");
-//            _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken");
-//        }
-//    }
-//}
+        public async Task<int> UpdateUser(AdminManageUserDto request, int Id)
+        {
+            var exisitingUser = await _unitOfWork.UserRepository.GetById(Id);
+            _mapper.Map(request, exisitingUser);
+            await _unitOfWork.UserRepository.Update(exisitingUser);
+            await _unitOfWork.SaveChangesAsync();
+            return exisitingUser.Id;
+        }
+    }
+}

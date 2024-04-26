@@ -55,10 +55,10 @@ namespace TaxiBookingService.Host
             services.AddTransient<IExternalHttpClient, ExternalApiClient>();
             services.AddTransient<ICustomerLogic<Customer>, CustomerLogic>();
             services.AddTransient<ICustomerRepository<Customer>, CustomerRepository>();
-            //services.AddTransient<IAdminLogic<Admin>, AdminLogic>();
-            //services.AddTransient<IAdminRepository<Admin>, AdminRepository>();
+            services.AddTransient<IAdminLogic<Admin>, AdminLogic>();
+            services.AddTransient<IAdminRepository<Admin>, AdminRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-
+            services.AddTransient<IRideLogic, RideLogic>();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters

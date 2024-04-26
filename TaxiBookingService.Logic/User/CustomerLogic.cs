@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 using TaxiBookingService.API.User.Customer;
 using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Client.Geocoding.Interfaces;
@@ -30,17 +30,18 @@ namespace TaxiBookingService.Logic.User
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IExternalHttpClient _externalApiClient;
-        
+        private readonly HttpClient _httpClient;
         private readonly IMapper _mapper;
-
-        public CustomerLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IExternalHttpClient externalApiClient, IMapper mapper)
+        private readonly IRideLogic _rideLogic;
+        public CustomerLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IExternalHttpClient externalApiClient, IMapper mapper, HttpClient httpClient, IRideLogic rideLogic)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
             _externalApiClient = externalApiClient;
             _mapper = mapper;
-
+            _httpClient = httpClient;
+            _rideLogic = rideLogic;
         }
 
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
@@ -113,6 +114,12 @@ namespace TaxiBookingService.Logic.User
             return result;
         }
 
+           private async Task<bool> IsValidCancellationReason(string reason)
+        {
+            var validReasons = await _unitOfWork.RideCancellationReasonRepository.GetAllValidReasons();
+            return validReasons.Any(r => string.Equals(r.Name, reason, StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task<(string, string)> Login(CustomerLoginDto request)
         {
             var Customer = await _unitOfWork.CustomerRepository.GetByEmail(request.Email);
@@ -136,7 +143,7 @@ namespace TaxiBookingService.Logic.User
             await _unitOfWork.SaveChangesAsync();
 
             return (token, refreshToken.Token);
-        }
+        }//isactive user
 
         public async Task<string> RefreshToken()
         {
@@ -184,10 +191,11 @@ namespace TaxiBookingService.Logic.User
             var Customer = await _unitOfWork.CustomerRepository.GetByToken(loggedInUser);
             var PickupLocation= await _externalApiClient.GetGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", request.PickupLocation);
             var DropoffLocation = await _externalApiClient.GetGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", request.DropoffLocation);
-            var fare = await CalculateFare(PickupLocation.Latitude, PickupLocation.Longitude, DropoffLocation.Latitude, DropoffLocation.Longitude);
+            var fare = await _rideLogic.CalculateFare(PickupLocation.Latitude, PickupLocation.Longitude, DropoffLocation.Latitude, DropoffLocation.Longitude);
             var result = await _unitOfWork.RideRepository.BookRide(PickupLocation,DropoffLocation, request, Customer.Id);
             await _unitOfWork.PaymentRepository.CreatePayment(result,request.PaymentType,fare);
-            await _unitOfWork.SaveChangesAsync();    
+            await _rideLogic.GetDriverAsync(result);
+            await _unitOfWork.SaveChangesAsync(); 
             return result;
         }
 
@@ -203,8 +211,8 @@ namespace TaxiBookingService.Logic.User
                 {
                     var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
                     decimal CancellationFee = tariff.FirstOrDefault(t => t.Name == "CancellationFee")?.Value ?? 0m;
-                    decimal rideEarnings = await _unitOfWork.PaymentRepository.GetFareByRide(rideId);
-                    decimal cancellationFee = rideEarnings * (CancellationFee / 100);
+                    var existingRide = await _unitOfWork.PaymentRepository.GetByRide(rideId);
+                    decimal cancellationFee = existingRide.TotalFareAmount * (CancellationFee / 100);
                     var customer = await _unitOfWork.CustomerRepository.GetById(ride.CustomerId);
                     customer.Customerwallet -= cancellationFee;
                     await _unitOfWork.CustomerRepository.Update(customer);
@@ -215,89 +223,6 @@ namespace TaxiBookingService.Logic.User
             {
                 throw new CannotCancel(AppConstant.CannotCancel);
             }
-        }
-
-        private async Task<bool> IsValidCancellationReason(string reason)
-        {
-            var validReasons = await _unitOfWork.RideCancellationReasonRepository.GetAllValidReasons();
-            return validReasons.Any(r => string.Equals(r.Name, reason, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public async Task<decimal> CalculateFare(decimal pickUpLat, decimal pickUpLong, decimal dropOffLat, decimal dropOffLong)
-        {
-        
-            double distance = CalculateDistance(pickUpLat, pickUpLong, dropOffLat,dropOffLong);
-            var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
-            decimal baseFare = tariff.FirstOrDefault(t => t.Name == "Basefare")?.Value ?? 0m;
-            decimal perKmCharge = tariff.FirstOrDefault(t => t.Name == "PerKm")?.Value ?? 0m;
-            decimal fare = baseFare + (decimal)distance * perKmCharge;
-            return fare;
-        }
-
-
-        private double CalculateDistance(decimal customerLat, decimal customerLong, decimal driverLat, decimal driverLong)
-        {
-            double customerLatRad = ToRadians(Convert.ToDouble(customerLat));
-            double customerLongRad = ToRadians(Convert.ToDouble(customerLong));
-            double driverLatRad = ToRadians(Convert.ToDouble(driverLat));
-            double driverLongRad = ToRadians(Convert.ToDouble(driverLong));
-
-            double dlong = driverLongRad - customerLongRad;
-            double dlat = driverLatRad - customerLatRad;
-
-            double ans = Math.Pow(Math.Sin(dlat / 2), 2) +
-                             Math.Cos(customerLatRad) * Math.Cos(driverLatRad) *
-                             Math.Pow(Math.Sin(dlong / 2), 2);
-            ans = 2 * Math.Asin(Math.Sqrt(ans));
-            double R = 6371;
-            ans = ans * R;
-            return ans;
-        }
-
-        private double ToRadians(double angle)
-        {
-            return Math.PI * angle / 180.0;
-        }
-
-
-        public async Task<Driver> FindNearbyDriverAsync(int rideId)
-        {
-            var rideStatus = await _unitOfWork.RideRepository.GetStatus(rideId);
-            if (rideStatus != 1)
-            {
-                throw new Exception("Ride is not in the searching state.");
-            }
-            var pickUpLoc = await _unitOfWork.RideRepository.GetRideLongLat(rideId);
-            var allDrivers = await _unitOfWork.DriverRepository.GetAllTaxiTypeDrivers(rideId);//unavaliable
-            var allTaxiTypeDrivers = await _unitOfWork.DriverRepository.GetAllDrivers();
-            var nearbyDrivers = new List<Driver>();
-            int maxDistance = 5;
-            foreach (var driver in allDrivers)
-            {
-                var driverLoc = await _unitOfWork.DriverRepository.GetLongLat(driver.UserId);
-                double distance = CalculateDistance(pickUpLoc.latitude, pickUpLoc.longitude, driverLoc.latitude, driverLoc.longitude);
-                if (distance < maxDistance)
-                {
-                    bool hasRejected = await _unitOfWork.RejectedRideRepository.HasDriverRejectedRide(driver.Id, rideId);
-                    if (!hasRejected)
-                    {
-                        nearbyDrivers.Add(driver);
-                    }
-                }
-            }
-            nearbyDrivers = nearbyDrivers.OrderBy(x => x.DriverRating).ToList();
-
-            return nearbyDrivers[0];
-        }
-
-        public async Task<Driver> GetDriverAsync(int id)
-        {
-            var driver = await FindNearbyDriverAsync(id);
-            await _unitOfWork.RideRepository.GetById(id);
-            await _unitOfWork.DriverRepository.UpdateStatus(driver.Id, 2);
-            await _unitOfWork.RideRepository.UpdateRideStatus(id,2,1);
-            await _unitOfWork.SaveChangesAsync();
-            return driver;
         }
 
         public async Task UpdateDriverRating(int driverId)
@@ -318,7 +243,6 @@ namespace TaxiBookingService.Logic.User
             }
         }
 
-
         public async Task FeedBack(CustomerRatingDto Feedback)
         {
             var ride = await _unitOfWork.RideRepository.Exists(Feedback.RideId);
@@ -333,6 +257,7 @@ namespace TaxiBookingService.Logic.User
             var driverId=await _unitOfWork.RideRepository.GetDriverByRideId(Feedback.RideId);
             await UpdateDriverRating(driverId);
         }
+
         public async Task<List<CustomerRideDisplayDto>> RideHistory()
         {
             var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
@@ -362,5 +287,53 @@ namespace TaxiBookingService.Logic.User
             return rideHistoryDtoList;
         }
 
+        public async Task<string> UpdateDropOffLocation(CustomerUpdateDropOffDto request)
+        {
+            var DropoffLocation = await _externalApiClient.GetGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", request.DropOffLocation);
+            var existingride = await _unitOfWork.RideRepository.GetById(request.RideId);
+            var existingLocation = await _unitOfWork.LocationRepository.GetById(existingride.DropoffLocationId);
+            existingLocation.Latitude=DropoffLocation.Latitude;
+            existingLocation.Longitude = DropoffLocation.Longitude;
+            await _unitOfWork.LocationRepository.Update(existingLocation);
+            var fare=await _rideLogic.CalculateFare(existingride.PickupLocation.Latitude, existingride.PickupLocation.Longitude, DropoffLocation.Latitude, DropoffLocation.Longitude);
+            var existingpayment = await _unitOfWork.PaymentRepository.GetByRide(request.RideId);
+            existingpayment.TotalFareAmount = fare;
+            await _unitOfWork.PaymentRepository.Update(existingpayment);
+            await _unitOfWork.SaveChangesAsync();
+            return $"updated dropofflocation :- {request.DropOffLocation} with {fare}";
+        }
+
+        public async Task<string> TopUpWallet(int amount)
+        {
+            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
+            var customer = await _unitOfWork.CustomerRepository.GetByToken(loggedInUser);
+            customer.Customerwallet = amount;
+            await _unitOfWork.CustomerRepository.Update(customer);
+            return AppConstant.AmountAdded;
+        }
+
+        public async Task<string> AddTrustedContact(CustomerTrustedContactDto request)
+        {
+            var trustedentity = _mapper.Map<TrustedContacts>(request);
+            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
+            var customer = await _unitOfWork.CustomerRepository.GetByToken(loggedInUser);
+            trustedentity.CustomerId=customer.Id;
+            await _unitOfWork.TrustedContactRepository.Add(trustedentity);
+            await _unitOfWork.SaveChangesAsync();
+            return AppConstant.AddedContacts;
+        }
+
+        public async Task<DriverDisplayDto> GetMatchedDriver(int rideId)
+        {
+            var ride=await _unitOfWork.RideRepository.GetById(rideId);
+            if(ride.RideStatusId!=2)
+            {
+                throw new Exception("No matching yet");
+            }
+            var user=await _unitOfWork.UserRepository.GetById(ride.Driver.UserId); 
+            var result=_mapper.Map<DriverDisplayDto>(user);
+            return result;
+            
+        }
     }
 }

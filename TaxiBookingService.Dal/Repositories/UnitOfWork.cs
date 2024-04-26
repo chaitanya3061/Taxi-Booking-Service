@@ -24,6 +24,8 @@ namespace TaxiBookingService.Dal.Repositories
         private IDriverRatingRepository _DriverRatingRepository;
         private IPaymentRepository _PaymentRepository;
         private ITrustedContactRepository _TrustedContactRepository;
+        private IUserRepository _UserRepository;
+
 
         private readonly TaxiBookingServiceDbContext _context;
         public UnitOfWork(TaxiBookingServiceDbContext context)
@@ -31,6 +33,7 @@ namespace TaxiBookingService.Dal.Repositories
             _context = context;
         }
 
+        public IUserRepository UserRepository => _UserRepository = new UserRepository(_context);
 
         public IDriverRepository<Driver> DriverRepository => _DriverRepository = new DriverRepository(_context);
 

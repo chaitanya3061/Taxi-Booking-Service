@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TaxiBookingService.API.User.Customer;
+using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Interfaces
@@ -17,6 +18,8 @@ namespace TaxiBookingService.Dal.Interfaces
        Task<int> GetCustomerByRideId(int rideId);
        Task<List<Ride>> GetAllDriverRides(int Id);
        Task<List<Ride>> GetAllCustomerRides(int Id);
+        Task<List<Ride>> GetAllPendingRides();
        Task<int> BookRide(Location pickUp, Location dropOff, CustomerBookRideDto request, int customerId);
+       Task<Ride> GetRide(int driverId);
     }
 }

@@ -16,14 +16,16 @@ namespace TaxiBookingService.Logic.User.Interfaces
         Task<string> RefreshToken();
         Task Logout();
         Task<int> AddTaxi(DriverTaxiDto taxi);
-        Task<string>Accept(int DriverId,int rideId);
-        Task Decline(DriverDeclineDto request);
+        Task<string>Accept(int rideId);
+        Task Decline(int rideId);
         Task StartRide(int rideId);
         Task<decimal> EndRide(int rideId);
         Task CancelRide(int rideId,string reason);   
         
         Task FeedBack(DriverRatingDto rating);
-
         Task<List<DriverRideDisplayDto>> RideHistory();
+
+        Task<DriverGetRideDto> GetRide();
+        
     }
 }

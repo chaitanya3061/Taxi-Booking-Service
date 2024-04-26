@@ -62,6 +62,7 @@ namespace TaxiBookingService.Dal.Entities
         public virtual Location Stop1Location { get; set; }
         public virtual Location Stop2Location { get; set; }
         public virtual RideStatus Ridestatus { get; set; }
+        public virtual Payment Payment { get; set; }
         public virtual RideCancellationReason RideCancellationReason { get; set; }
         public virtual ICollection<RejectedRide> RejectedRides { get; set; }
 

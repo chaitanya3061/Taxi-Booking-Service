@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Schema;
 using TaxiBookingService.API.User.Customer;
+using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 
@@ -64,12 +65,18 @@ namespace TaxiBookingService.Dal.Repositories
             return await _context.Ride.Where(x=>x.DriverId==driverId && x.RideStatusId==4).Include(x=>x.TaxiType).Include(x=>x.Customer.User).Include(x=>x.PickupLocation).Include(x=>x.DropoffLocation).ToListAsync();
         }
 
+        public async Task<List<Ride>> GetAllPendingRides()
+        {
+            return await _context.Ride.Where(x => x.RideStatusId == 1).ToListAsync();
+        }
+
         public async Task<List<Ride>> GetAllCustomerRides(int customerId)
         {
             return await _context.Ride.Where(x => x.CustomerId == customerId && x.RideStatusId == 4).Include(x => x.TaxiType).Include(x => x.Driver.User).Include(x => x.PickupLocation).Include(x => x.DropoffLocation).ToListAsync();
         }
 
-        public async Task<int> BookRide(Location pickUp, Location dropOff, CustomerBookRideDto request, int customerId)
+
+        public async Task<int> BookRide(Location pickUp, Location dropOff, CustomerBookRideDto request, int customerId)//dto for paramaetrs
         {
             var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == request.TaxiType.ToLower());
             var ride = new Ride
@@ -82,8 +89,13 @@ namespace TaxiBookingService.Dal.Repositories
                 RideStatusId = 1
             };
             _context.Ride.Add(ride);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();//checking no of save chnages tracking records
             return ride.Id;
+        }
+
+        public async Task<Ride> GetRide(int driverId)
+        {
+           return await _context.Ride.Include(x=>x.PickupLocation).Include(x => x.DropoffLocation).Include(x => x.TaxiType).FirstOrDefaultAsync(x => x.DriverId == driverId && x.RideStatusId == 1 && x.Driver.DriverStatusId==2);
         }
     }
 }
