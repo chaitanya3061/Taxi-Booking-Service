@@ -8,20 +8,12 @@ using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Interfaces
 {
-    public interface IDriverRepository<T>
+    public interface IDriverRepository :IRepository<Driver>
     {
-        Task UpdateRefreshToken(T user, RefreshToken refreshToken);
-        Task<int> Register(DriverRegisterDto request, byte[] passwordHash, byte[] passwordSalt);
-        Task<T> GetByEmail(string email);
-        Task<T> GetByToken(string token);
-        Task<T> GetById(int id);
-        Task Login(T entity);
-        Task Logout(T entity);
+        Task<Driver> GetByToken(string token);
+        Task<Driver> GetById(int id);
         Task<List<Driver>> GetAllDrivers();
-        Task<(decimal latitude, decimal longitude)> GetLongLat(int Id);
+        Task<Location> GetLongLat(int driverId);
         Task<List<Driver>> GetAllTaxiTypeDrivers(int rideId);
-        Task UpdateStatus(int Id,int statusId);
-        Task UpdateRideStatus(int driverId, int rideId);
-        Task Update(Driver driver);
     }
 }

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TaxiBookingService.Client.Geocoding.Interfaces;
 using TaxiBookingService.Common.AssetManagement.Common;
+using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 using TaxiBookingService.Logic.User.Interfaces;
@@ -18,17 +19,16 @@ namespace TaxiBookingService.Logic.User
     public class RideLogic :IRideLogic
     {
         private readonly IUnitOfWork _unitOfWork;
-        public RideLogic(IUnitOfWork unitOfWork)
+        private readonly ILoggerAdapter _loggerAdapter;
+
+        public RideLogic(IUnitOfWork unitOfWork, ILoggerAdapter loggerAdapter)
         {
             _unitOfWork = unitOfWork;
+            _loggerAdapter = loggerAdapter;
         }
         public async Task<Driver> FindNearbyDriverAsync(int rideId)
         {
             var rideStatus = await _unitOfWork.RideRepository.GetStatus(rideId);
-            if (rideStatus != 1)
-            {
-                throw new Exception("Ride is not in the searching state.");
-            }
             var pickUpLoc = await _unitOfWork.RideRepository.GetRideLongLat(rideId);
             var allDrivers = await _unitOfWork.DriverRepository.GetAllTaxiTypeDrivers(rideId);
             var nearbyDrivers = new List<Driver>();
@@ -36,7 +36,7 @@ namespace TaxiBookingService.Logic.User
             foreach (var driver in allDrivers)
             {
                 var driverLoc = await _unitOfWork.DriverRepository.GetLongLat(driver.UserId);
-                double distance = CalculateDistance(pickUpLoc.latitude, pickUpLoc.longitude, driverLoc.latitude, driverLoc.longitude);
+                double distance = CalculateDistance(pickUpLoc, driverLoc);
                 if (distance < maxDistance)
                 {
                     bool hasRejected = await _unitOfWork.RejectedRideRepository.HasDriverRejectedRide(driver.Id, rideId);
@@ -47,31 +47,54 @@ namespace TaxiBookingService.Logic.User
                 }
             }
             nearbyDrivers = nearbyDrivers.OrderByDescending(x => x.DriverRating).ToList();
+            if (nearbyDrivers.Count == 0)
+            {
+                return null; 
+            }
             return nearbyDrivers[0];
         }
 
-        public async Task GetDriverAsync(int rideid)
+        public async Task<string> GetDriverAsync(int rideid)
         {
             var driver = await FindNearbyDriverAsync(rideid);
-            var ride = await _unitOfWork.RideRepository.GetById(rideid);//handle 0
+            var ride = await _unitOfWork.RideRepository.GetById(rideid);
+
+            if (ride == null)
+            {
+                throw new NotFoundException(AppConstant.RideNotFound, _loggerAdapter);
+            }
+
+            if (driver == null)
+            {
+                return AppConstant.NodriversFound;
+            }
             ride.DriverId = driver.Id;
-            driver.DriverStatusId = 2;
+            driver.DriverStatusId = AppConstant.Unavailable;
             await _unitOfWork.DriverRepository.Update(driver);
             await _unitOfWork.RideRepository.Update(ride);
             await _unitOfWork.SaveChangesAsync();
+            return AppConstant.RequestSended;
         }
 
-
-        private double CalculateDistance(decimal customerLat, decimal customerLong, decimal driverLat, decimal driverLong)
+        public async Task<decimal> CalculateCancellationFee(int rideId)
         {
-            double customerLatRad = ToRadians(Convert.ToDouble(customerLat));
-            double customerLongRad = ToRadians(Convert.ToDouble(customerLong));
-            double driverLatRad = ToRadians(Convert.ToDouble(driverLat));
-            double driverLongRad = ToRadians(Convert.ToDouble(driverLong));
-            double dlong = driverLongRad - customerLongRad;
-            double dlat = driverLatRad - customerLatRad;
+            var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
+            decimal cancellationFeePercentage = tariff.FirstOrDefault(t => t.Name == AppConstant.CancellationFee)?.Value ?? 0m;
+            var ridePayment = await _unitOfWork.PaymentRepository.GetByRide(rideId);
+            var totalRideAmount = ridePayment.TotalFareAmount;
+            return totalRideAmount * (cancellationFeePercentage / 100);
+        }
+
+        private double CalculateDistance(Location pickUpLocation, Location dropOffLocation)
+        {
+            double pickUpLatRad = ToRadians(Convert.ToDouble(pickUpLocation.Latitude));
+            double pickUpLongRad = ToRadians(Convert.ToDouble(pickUpLocation.Longitude));
+            double dropOffLatRad = ToRadians(Convert.ToDouble(dropOffLocation.Latitude));
+            double dropOffLongRad = ToRadians(Convert.ToDouble(dropOffLocation.Longitude));
+            double dlong = dropOffLongRad - pickUpLongRad;
+            double dlat = dropOffLatRad - pickUpLatRad;
             double ans = Math.Pow(Math.Sin(dlat / 2), 2) +
-                             Math.Cos(customerLatRad) * Math.Cos(driverLatRad) *
+                             Math.Cos(pickUpLatRad) * Math.Cos(dropOffLatRad) *
                              Math.Pow(Math.Sin(dlong / 2), 2);
             ans = 2 * Math.Asin(Math.Sqrt(ans));
             double R = 6371;
@@ -85,14 +108,24 @@ namespace TaxiBookingService.Logic.User
         }
 
 
-        public async Task<decimal> CalculateFare(decimal pickUpLat, decimal pickUpLong, decimal dropOffLat, decimal dropOffLong)
+        public async Task<decimal> CalculateFare(Location pickUpLocation, Location dropOffLocation)
         {
 
-            double distance = CalculateDistance(pickUpLat, pickUpLong, dropOffLat, dropOffLong);
+            double distance = CalculateDistance(pickUpLocation, dropOffLocation);
             var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
-            decimal baseFare = tariff.FirstOrDefault(t => t.Name == "Basefare")?.Value ?? 0m;
-            decimal perKmCharge = tariff.FirstOrDefault(t => t.Name == "PerKm")?.Value ?? 0m;
+            decimal baseFare = tariff.FirstOrDefault(t => t.Name == AppConstant.Basefare)?.Value ?? 0m;
+            decimal perKmCharge = tariff.FirstOrDefault(t => t.Name == AppConstant.PerKm)?.Value ?? 0m;
             decimal fare = baseFare + (decimal)distance * perKmCharge;
+            return fare;
+        }
+
+        public async Task<decimal> CalculateFareWithStop(Location pickupLocation, Location stopLocation, Location dropoffLocation)
+        {
+            var fare1 =await CalculateFare(pickupLocation, stopLocation);
+            var fare2 = await CalculateFare(stopLocation, dropoffLocation);
+
+            decimal fare = fare1+fare2; 
+
             return fare;
         }
 

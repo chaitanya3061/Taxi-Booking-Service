@@ -9,23 +9,18 @@ using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Logic.User.Interfaces
 {
-    public interface IDriverLogic<T>
+    public interface IDriverLogic
     {
         Task<int> Register(DriverRegisterDto request);
-        Task<string> Login(DriverLoginDto request);
-        Task<string> RefreshToken();
-        Task Logout();
         Task<int> AddTaxi(DriverTaxiDto taxi);
         Task<string>Accept(int rideId);
-        Task Decline(int rideId);
-        Task StartRide(int rideId);
-        Task<decimal> EndRide(int rideId);
-        Task CancelRide(int rideId,string reason);   
-        
-        Task FeedBack(DriverRatingDto rating);
+        Task<string> Decline(int rideId);
+        Task<string> StartRide(int rideId, int verificationPin);
+        Task<string> EndRide(int rideId);
+        Task<string> CancelRide(int rideId,string reason);   
+        Task<string> FeedBack(DriverRatingDto rating);
         Task<List<DriverRideDisplayDto>> RideHistory();
-
-        Task<DriverGetRideDto> GetRide();
-        
+        Task<DriverGetRideDto> GetActiveRide();
+        Task<string> ConfirmRidePayment(int  rideId);  
     }
 }

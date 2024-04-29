@@ -15,7 +15,7 @@ namespace TaxiBookingService.Common.Utilities
             logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console()
-            .WriteTo.File("D:/logs/AssetmanagementLogs-.txt", rollingInterval: RollingInterval.Day)
+            .WriteTo.File("D:/logs/TaxiManagmentService-.txt", rollingInterval: RollingInterval.Day)
             .CreateLogger();
         }
 

@@ -51,6 +51,7 @@ namespace TaxiBookingService.Dal.Entities
 
         [Column(TypeName = "datetime2")]
         public DateTime TokenExpires { get; set; }
+        public bool IsActive { get; set; }
 
         public virtual Role Role { get; set; }
 

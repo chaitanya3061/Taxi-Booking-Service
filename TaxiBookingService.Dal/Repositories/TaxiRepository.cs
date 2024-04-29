@@ -26,18 +26,7 @@ namespace TaxiBookingService.Dal.Repositories
 
         public async Task<int> AddTaxi(DriverTaxiDto request, int driverId)
         {
-            var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == request.TaxiType.ToLower());
-            var Taxi = new Taxi
-            {
-                DriverId = driverId,
-                Name = request.Name,
-                RegistrationNumber = request.RegistrationNumber,
-                Color = request.Color,
-                TaxiTypeId = taxiType.Id,
-            };
-            _context.Taxi.Add(Taxi);
-            await _context.SaveChangesAsync();
-            return Taxi.Id;
+            return 1;
         }
 
         //public async Task UpdateTaxi(int taxiId, DriverTaxiDto taxi)

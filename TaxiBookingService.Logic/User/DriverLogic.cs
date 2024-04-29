@@ -1,42 +1,31 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
-//using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
-using TaxiBookingService.Dal.Repositories;
 using TaxiBookingService.Logic.User.Interfaces;
 using static TaxiBookingService.Common.CustomException;
 using AutoMapper;
-using TaxiBookingService.API.Ride;
 using TaxiBookingService.Client.Geocoding.Interfaces;
-using Azure.Core;
-using System.Net.Http;
-using System.Text.Json;
+using TaxiBookingService.Client.DistanceMatrix.Interfaces;
+using TaxiBookingService.Common.Utilities;
 
 namespace TaxiBookingService.Logic.User
 {
-    public class DriverLogic : IDriverLogic<Driver>
+    public class DriverLogic : IDriverLogic
     {
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly IExternalHttpClient _externalApiClient;
+        private readonly IGeoCodingHttpClient _externalApiClient;
         private readonly IRideLogic _rideLogic;
-
-        public DriverLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IMapper mapper, IExternalHttpClient externalApiClient,IRideLogic rideLogic
+        private readonly IDistanceMatrixHttpClient _distanceMatrixHttpClient;
+        private readonly ILoggerAdapter _loggerAdapter;
+        public DriverLogic(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IMapper mapper, IGeoCodingHttpClient externalApiClient, IRideLogic rideLogic, IDistanceMatrixHttpClient distanceMatrixHttpClient, ILoggerAdapter loggerAdapter
 )
         {
             _unitOfWork = unitOfWork;
@@ -45,6 +34,8 @@ namespace TaxiBookingService.Logic.User
             _mapper = mapper;
             _externalApiClient = externalApiClient;
             _rideLogic = rideLogic;
+            _distanceMatrixHttpClient = distanceMatrixHttpClient;
+            _loggerAdapter = loggerAdapter;
         }
 
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
@@ -56,250 +47,217 @@ namespace TaxiBookingService.Logic.User
             }
         }
 
-        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+        private async Task<Driver> GetDriverFromToken()
         {
-            using (var hmac = new HMACSHA512(passwordSalt))
+            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies[AppConstant.refreshToken];
+            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
+            return driver;
+        }
+
+        private async Task<Ride> GetExistingRide(int rideId,int driverId)
+        {
+            var existingRide = await _unitOfWork.RideRepository.GetById(rideId);
+
+            if (existingRide == null || existingRide.DriverId != driverId)
             {
-                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return computedHash.SequenceEqual(passwordHash);
+                throw new NotFoundException(AppConstant.RideNotFound, _loggerAdapter);
+            }
+
+            return existingRide;
+        }
+
+        private async Task<Location> GetGeocoding(string dropOffLocation)
+        {
+            try
+            {
+                return await _externalApiClient.GetGeocodingAsync(dropOffLocation);
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
 
-        private string CreateToken(Driver driver)
+        private async Task<string> GetReverseGeocoding(decimal latitude, decimal longitude)
         {
-            var claims = new List<Claim>
+            try
             {
-                new Claim(ClaimTypes.Email, driver.User.Email),
-                new Claim(ClaimTypes.Role, "Driver")
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.Now.AddMinutes(15),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                return await _externalApiClient.GetReverseGeocodingAsync(latitude, longitude);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
-        private RefreshToken GenerateRefreshToken()
+        private async Task<Ride> GetRide(int rideId)
         {
-            return new RefreshToken
+            var ride = await _unitOfWork.RideRepository.GetById(rideId);
+
+            if (ride == null)
             {
-                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-                Expires = DateTime.UtcNow.AddDays(1)
-            };
+                throw new NotFoundException(AppConstant.RideNotFound, _loggerAdapter);
+            }
+
+            return ride;
         }
 
-        private async Task SetRefreshToken(Driver driver, RefreshToken newRefreshToken)
+        private async Task<bool> IsValidCancellationReason(string reason)
         {
-            await _unitOfWork.DriverRepository.UpdateRefreshToken(driver, newRefreshToken);
-
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Expires = newRefreshToken.Expires,
-            };
-
-            _httpContextAccessor.HttpContext.Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+            var validReasons = await _unitOfWork.RideCancellationReasonRepository.GetAllValidReasons();
+            return validReasons.Any(r => string.Equals(r.Name, reason, StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<int> Register(DriverRegisterDto request)
         {
+            var checkEmail = await _unitOfWork.UserRepository.IsEmail(request.Email);
+
+            if (checkEmail)
+            {
+                throw new EmailAlreadyExists(AppConstant.EmailAlreadyExists, _loggerAdapter);
+            }
+
             CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
-            var result = await _unitOfWork.DriverRepository.Register(request, passwordHash, passwordSalt);
-            await _unitOfWork.SaveChangesAsync();
-            return result;
-        }
+            var userEntity = _mapper.Map<Dal.Entities.User>(request);
+            userEntity.PasswordHash = passwordHash;
+            userEntity.PasswordSalt = passwordSalt;
+            userEntity.RoleId = AppConstant.Driver;
 
-        public async Task<string> Login(DriverLoginDto request)
-        {
-            var driver = await _unitOfWork.DriverRepository.GetByEmail(request.Email);
-            if (driver == null)
-            {
-                throw new Exception(AppConstant.UserNotFound);
-            }
+            await _unitOfWork.UserRepository.Add(userEntity);
 
-
-
-            if (!VerifyPasswordHash(request.Password, driver.User.PasswordHash, driver.User.PasswordSalt))
-            {
-                throw new AuthenticationException(AppConstant.PasswordNotFound);
-            }
-
-            await _unitOfWork.DriverRepository.Login(driver);
+            var driverEntity = _mapper.Map<Driver>(userEntity);
+            driverEntity.User = userEntity;
+            driverEntity = _mapper.Map(request, driverEntity);
+            await _unitOfWork.DriverRepository.Add(driverEntity);
             await _unitOfWork.SaveChangesAsync();
 
-            string token = CreateToken(driver);
-            _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);
-
-            var refreshToken = GenerateRefreshToken();
-            await SetRefreshToken(driver, refreshToken);
-            await _unitOfWork.SaveChangesAsync();
-
-            return token;
-        }
-
-        public async Task<string> RefreshToken()
-        {
-            var refreshToken = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-            var driver = await _unitOfWork.DriverRepository.GetByToken(refreshToken);
-
-            if (driver == null)
-            {
-                throw new InvalidTokenException(AppConstant.InvalidToken);
-            }
-            else if (driver.User.TokenExpires <= DateTime.Now)
-            {
-                throw new TokenExpiredException(AppConstant.TokenExpired);
-            }
-
-            string token = CreateToken(driver);
-            _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);
-
-            var newRefreshToken = GenerateRefreshToken();
-            await SetRefreshToken(driver, newRefreshToken);
-            await _unitOfWork.SaveChangesAsync();
-
-            return token;
-        }
-
-        public async Task Logout()
-        {
-            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
-            if (driver == null)
-            {
-                throw new Exception(AppConstant.UserNotFound);
-            }
-
-            await _unitOfWork.DriverRepository.Logout(driver);
-            await _unitOfWork.SaveChangesAsync();
-
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete("refreshToken");
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken");
+            return driverEntity.Id;
         }
 
         public async Task<int> AddTaxi(DriverTaxiDto request)
         {
-            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
-            var taxiId = await _unitOfWork.TaxiRepository.AddTaxi(request, driver.Id);
+            var driver = await GetDriverFromToken();
+            var newTaxi = _mapper.Map<Taxi>(request);
+            newTaxi.DriverId = driver.Id;
+            await _unitOfWork.TaxiRepository.Add(newTaxi);
             await _unitOfWork.SaveChangesAsync();
-            return taxiId;
+            return newTaxi.Id;
         }
-
-        public async Task<decimal> CalculateFare(int rideId)
-        {
-            var ride = await _unitOfWork.RideRepository.GetById(rideId);
-            var pickUpLocation = await _unitOfWork.LocationRepository.GetById(ride.PickupLocationId);
-            double distance = CalculateDistance(ride.PickupLocation.Latitude, ride.PickupLocation.Longitude, ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
-            var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
-            decimal baseFare = tariff.FirstOrDefault(t => t.Name == "Basefare")?.Value ?? 0m;
-            decimal perKmCharge = tariff.FirstOrDefault(t => t.Name == "PerKm")?.Value ?? 0m;
-            decimal fare = baseFare + (decimal)distance * perKmCharge;
-            return fare;
-        }
-
-
-        private double CalculateDistance(decimal customerLat, decimal customerLong, decimal driverLat, decimal driverLong)
-        {
-            double customerLatRad = ToRadians(Convert.ToDouble(customerLat));
-            double customerLongRad = ToRadians(Convert.ToDouble(customerLong));
-            double driverLatRad = ToRadians(Convert.ToDouble(driverLat));
-            double driverLongRad = ToRadians(Convert.ToDouble(driverLong));
-            double dlong = driverLongRad - customerLongRad;
-            double dlat = driverLatRad - customerLatRad;
-            double ans = Math.Pow(Math.Sin(dlat / 2), 2) +
-                             Math.Cos(customerLatRad) * Math.Cos(driverLatRad) *
-                             Math.Pow(Math.Sin(dlong / 2), 2);
-            ans = 2 * Math.Asin(Math.Sqrt(ans));
-            double R = 6371;
-            ans = ans * R;
-            return ans;
-        }
-
-        private double ToRadians(double angle)
-        {
-            return Math.PI * angle / 180.0;
-        }
-
-
 
         public async Task<string> Accept(int rideId)
         {
-            var exisitngride = await _unitOfWork.RideRepository.GetById(rideId);
-            exisitngride.RideStatusId = 2;
-            await _unitOfWork.RideRepository.Update(exisitngride);
+            var driver = await GetDriverFromToken();
+            var existingRide = await GetExistingRide(rideId,driver.Id);
+
+            if (existingRide.RideStatusId != AppConstant.Searching)
+            {
+                throw new InvalidOperationException(AppConstant.DriverNotAssignedToRide);
+            }
+
+            existingRide.RideStatusId = AppConstant.Accepted;
+            await _unitOfWork.RideRepository.Update(existingRide);
             await _unitOfWork.SaveChangesAsync();
             return AppConstant.RideAccepted;
         }
 
-        public async Task StartRide(int rideId)
+        public async Task<string> StartRide(int rideId, int verificationPin)
         {
-            await _unitOfWork.RideRepository.UpdateRideStatus(rideId, 3, 2);
+            var existingRide = await GetRide(rideId);
+
+            if (existingRide.RideStatusId != AppConstant.Accepted)
+            {
+                throw new InvalidOperationException(AppConstant.DriverNotAssignedToRide);
+            }
+
+            if (verificationPin != existingRide.VerificationPin)
+            {
+                throw new InvalidverificationPin(AppConstant.InvalidverificationPin,_loggerAdapter);
+            }
+
+            existingRide.RideStatusId = AppConstant.Started;
+            await _unitOfWork.RideRepository.Update(existingRide);
+            await _unitOfWork.SaveChangesAsync();
+            return AppConstant.RideStarted; 
+
         }
 
-        public async Task<decimal> EndRide(int rideId)
+        public async Task<string> EndRide(int rideId)
         {
-            await _unitOfWork.RideRepository.UpdateRideStatus(rideId, 4, 3);
-            var ride = await _unitOfWork.RideRepository.GetById(rideId);
-            var payment = await _unitOfWork.PaymentRepository.GetByRide(rideId);
-            await _unitOfWork.DriverRepository.UpdateStatus(ride.DriverId.Value, 1);
+            var driver = await GetDriverFromToken();
+            var existingRide = await GetExistingRide(rideId, driver.Id);
+            var existingpayment = await _unitOfWork.PaymentRepository.GetByRide(rideId);
 
-            //await _unitOfWork.CustomerRepository.UpdateWallet(fare,ride.CustomerId);
-            //var tariff = await _unitOfWork.TariffChargeRepository.GetTariffCharges();
-            //decimal commissionPercentage = tariff.FirstOrDefault(t => t.Name == "driverCommissionRate")?.Value ?? 0m;
-            //decimal commissionAmount = (fare * commissionPercentage) / 100;
-            return payment.TotalFareAmount;
+            if (existingRide.RideStatusId != AppConstant.Started)
+            {
+                throw new InvalidOperationException(AppConstant.DriverNotYetStarted);
+            }
 
-        }
+            if (existingpayment.PaymentStatusId == AppConstant.Pending)
+            {
+                throw new PaymentNotCompleted(AppConstant.PaymentNotCompleted,_loggerAdapter);
+            }
 
-        public async Task Decline(int rideId)
-        {
-            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
-            driver.DriverStatusId = 1;
+            existingRide.RideStatusId = AppConstant.RideCompleted;
+            existingRide.EndTime = DateTime.Now;
+            await _unitOfWork.RideRepository.Update(existingRide);
+            driver.DriverStatusId = AppConstant.Available;
             await _unitOfWork.DriverRepository.Update(driver);
-            var declineentity=new RejectedRide {RideId=rideId,DriverId=driver.Id};
-            await _unitOfWork.RejectedRideRepository.Add(declineentity);
+            await _unitOfWork.SaveChangesAsync();
+            return AppConstant.RideEnded;
+        }
+
+        public async Task<string> Decline(int rideId)
+        {
+            var driver = await GetDriverFromToken();
+            var existingRide = await GetExistingRide(rideId, driver.Id);
+
+            if(existingRide.RideStatusId!= AppConstant.Started) 
+            { 
+                throw new RideAlreadyAccepted(AppConstant.RideAlreadyAccepted,_loggerAdapter); 
+            }
+
+            driver.DriverStatusId = AppConstant.Available;
+            await _unitOfWork.DriverRepository.Update(driver);
+            var declineEntity = new RejectedRide { RideId = rideId, DriverId = driver.Id };
+            await _unitOfWork.RejectedRideRepository.Add(declineEntity);
             await _unitOfWork.SaveChangesAsync();
             await _rideLogic.GetDriverAsync(rideId);
+            return AppConstant.Declined;
         }
 
-        public async Task CancelRide(int rideId, string reason)
+        public async Task<string> CancelRide(int rideId, string reason)
         {
-            var status = await _unitOfWork.RideRepository.GetStatus(rideId);
-            var ride = await _unitOfWork.RideRepository.GetById(rideId);
+            var driver = await GetDriverFromToken();
+            var existingRide = await GetExistingRide(rideId, driver.Id);
+            var rideStatus = await _unitOfWork.RideRepository.GetStatus(rideId);
 
-            if (status == 2)
+            if (rideStatus == AppConstant.Accepted)
             {
                 bool isValidReason = await IsValidCancellationReason(reason);
 
                 if (!isValidReason)
                 {
-
-                    var tariff = await _unitOfWork.TariffChargeRepository.GetAll();
-
-                    decimal CancellationFee = tariff.FirstOrDefault(t => t.Name == "CancellationFee")?.Value ?? 0m;
-                    decimal rideEarnings = await CalculateFare(rideId);
-                    decimal cancellationFee = rideEarnings * (CancellationFee / 100);
-
-                    var driver = await _unitOfWork.DriverRepository.GetById(ride.DriverId.Value);
+                    decimal cancellationFee = await _rideLogic.CalculateCancellationFee(rideId);
                     driver.Driverearnings -= cancellationFee;
                     await _unitOfWork.DriverRepository.Update(driver);
                 }
-                await _unitOfWork.RideRepository.UpdateRideStatus(rideId, 5, 2);
-                await _unitOfWork.DriverRepository.UpdateStatus(ride.DriverId.Value, 1);
+
+                driver.DriverStatusId = AppConstant.Available;
+                await _unitOfWork.DriverRepository.Update(driver);
+                existingRide.RideStatusId = AppConstant.Searching;
+                await _unitOfWork.RideRepository.Update(existingRide);
+                var declineEntity = new RejectedRide { RideId = rideId, DriverId = driver.Id };
+                await _unitOfWork.RejectedRideRepository.Add(declineEntity);
+                await _unitOfWork.SaveChangesAsync();
+                await _rideLogic.GetDriverAsync(rideId);
             }
             else
             {
-                throw new CannotCancel(AppConstant.CannotCancel);
+                throw new InvalidOperationException(AppConstant.CannotCancel);
             }
+            return AppConstant.DriverCancelled;
         }
+
 
         public async Task UpdateCustomerRating(int customerId)
         {
@@ -318,76 +276,87 @@ namespace TaxiBookingService.Logic.User
             }
         }
 
-        private async Task<bool> IsValidCancellationReason(string reason)
-        {
-            var validReasons = await _unitOfWork.RideCancellationReasonRepository.GetAllValidReasons();
-            return validReasons.Any(r => string.Equals(r.Name, reason, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public async Task FeedBack(DriverRatingDto Feedback)
+        public async Task<string> FeedBack(DriverRatingDto Feedback)
         {
             var ride = await _unitOfWork.RideRepository.Exists(Feedback.RideId);
+
             if (!ride)
             {
-                throw new NotFoundException(AppConstant.RideNotFound);
+                throw new NotFoundException(AppConstant.RideNotFound, _loggerAdapter);
             }
+
             var feedback = _mapper.Map<DriverRating>(Feedback);
             await _unitOfWork.DriverRatingRepository.Add(feedback);
             await _unitOfWork.SaveChangesAsync();
             var customerId = await _unitOfWork.RideRepository.GetCustomerByRideId(Feedback.RideId);
             await UpdateCustomerRating(customerId);
+            return AppConstant.Feedback;
         }
 
         public async Task<List<DriverRideDisplayDto>> RideHistory()
         {
-            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
+            var driver = await GetDriverFromToken();
             var rides = await _unitOfWork.RideRepository.GetAllDriverRides(driver.Id);
+
             if (rides.Count == 0)
             {
-                throw new NotFoundException(AppConstant.Notrides);
+                throw new NotFoundException(AppConstant.Notrides, _loggerAdapter);
             }
+
             var rideHistoryDtoList = new List<DriverRideDisplayDto>();
             foreach (var ride in rides)
             {
-                var pickUpAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.PickupLocation.Latitude, ride.PickupLocation.Longitude);
-                var dropoffAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
-                var rideHistoryDto = new DriverRideDisplayDto
-                {
-                    Id = ride.Id,
-                    Customer = ride.Customer.User.Name,
-                    TaxiType = ride.TaxiType.Name,
-                    PickupLocation = pickUpAddress,
-                    DropoffLocation = dropoffAddress,
-                    StartTime = ride.StartTime,
-                    EndTime = ride.EndTime,
-                };
-
-                rideHistoryDtoList.Add(rideHistoryDto);
+                var pickUpAddress = await _externalApiClient.GetReverseGeocodingAsync(ride.PickupLocation.Latitude, ride.PickupLocation.Longitude);
+                var dropoffAddress = await _externalApiClient.GetReverseGeocodingAsync(ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
+                var exisitngRide=_mapper.Map<DriverRideDisplayDto>(ride);
+                exisitngRide.PickupLocation = pickUpAddress;
+                exisitngRide.DropoffLocation = dropoffAddress;  
+                rideHistoryDtoList.Add(exisitngRide);
             }
             return rideHistoryDtoList;
         }
 
-        public async Task<DriverGetRideDto> GetRide()
+        public async Task<DriverGetRideDto> GetActiveRide()
         {
-
-            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
-            var driver = await _unitOfWork.DriverRepository.GetByToken(loggedInUser);
+            var driver = await GetDriverFromToken();
             var ride = await _unitOfWork.RideRepository.GetRide(driver.Id);
-            if (ride == null)
+
+            if (ride == null || ride.RideStatusId!=AppConstant.Searching)
             {
-                throw new Exception("no rides found");
+                throw new Exception(AppConstant.NoridesFound);
             }
-            var pickUpAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.PickupLocation.Latitude, ride.PickupLocation.Longitude);
-            var dropoffAddress = await _externalApiClient.GetReverseGeocodingAsync("4a87e7d383bb4ca7a8c484db00f43434", ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
-            var result = new DriverGetRideDto
-            {
-                RideId=ride.Id,
-                TaxiType = ride.TaxiType.Name,
-                PickupLocation = pickUpAddress,
-                DropoffLocation = dropoffAddress,
-            };
+
+            var pickUpAddress = await _externalApiClient.GetReverseGeocodingAsync(ride.PickupLocation.Latitude, ride.PickupLocation.Longitude);
+            var dropoffAddress = await _externalApiClient.GetReverseGeocodingAsync(ride.DropoffLocation.Latitude, ride.DropoffLocation.Longitude);
+            var eta = await _distanceMatrixHttpClient.GetDurationAsync(ride.PickupLocation, ride.DropoffLocation);
+            var result=_mapper.Map<DriverGetRideDto>(ride);
+            result.PickupLocation = pickUpAddress;
+            result.DropoffLocation = dropoffAddress;
+            result.EstimatedTimeArrival = eta;
             return result;
+        }
+
+        public async Task<string> ConfirmRidePayment(int rideId)
+        {
+            var existingPayment = await _unitOfWork.PaymentRepository.GetByRide(rideId);
+            var existingRide = await GetRide(rideId);
+            var paymentMethod = await _unitOfWork.PaymentMethodRepository.GetById(existingPayment.PaymentMethodId);
+
+            if (existingRide.RideStatusId == AppConstant.Searching)
+            {
+                throw new NotStarted(AppConstant.DriverNotYetStarted,_loggerAdapter);
+            }
+            if (paymentMethod.Name == AppConstant.Cash)
+            {
+                existingPayment.PaymentStatusId = AppConstant.Completed;
+                await _unitOfWork.PaymentRepository.Update(existingPayment);
+                await _unitOfWork.SaveChangesAsync();
+                return AppConstant.PaymentSuccess;
+            }
+            else
+            {
+                return AppConstant.PaymentMadeInWallet;
+            }
         }
     }
 }

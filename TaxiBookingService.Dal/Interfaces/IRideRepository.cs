@@ -13,7 +13,7 @@ namespace TaxiBookingService.Dal.Interfaces
     {
        Task UpdateRideStatus(int rideId,int originalId,int previousId);
        Task<int> GetStatus(int rideId);
-       Task<(decimal latitude, decimal longitude)> GetRideLongLat(int Id);
+       Task<Location> GetRideLongLat(int Id);
        Task<int> GetDriverByRideId(int rideId);
        Task<int> GetCustomerByRideId(int rideId);
        Task<List<Ride>> GetAllDriverRides(int Id);

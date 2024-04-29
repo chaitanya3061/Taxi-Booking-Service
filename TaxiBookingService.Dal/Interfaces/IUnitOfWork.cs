@@ -9,9 +9,9 @@ namespace TaxiBookingService.Dal.Interfaces
 {
     public interface IUnitOfWork
     {
-        IDriverRepository<Driver> DriverRepository { get; }
-        ICustomerRepository<Customer> CustomerRepository { get; }
-        IAdminRepository<Admin> AdminRepository { get; }
+        IDriverRepository DriverRepository { get; }
+        ICustomerRepository CustomerRepository { get; }
+        IAdminRepository AdminRepository { get; }
         IPaymentRepository PaymentRepository { get; }
         IRideRepository RideRepository { get; }
         ILocationRepository LocationRepository { get; }
@@ -23,6 +23,8 @@ namespace TaxiBookingService.Dal.Interfaces
         ICustomerRatingRepository CustomerRatingRepository { get; }
         IDriverRatingRepository DriverRatingRepository { get; }
         IUserRepository UserRepository { get; }
+        IPaymentMethodRepository PaymentMethodRepository { get; }
+        ITaxiTypeRepository TaxiTypeRepository { get; }
         Task<int> SaveChangesAsync();
     }
 }

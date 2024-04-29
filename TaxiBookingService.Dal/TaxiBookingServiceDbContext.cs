@@ -216,8 +216,8 @@ namespace TaxiBookingService.Dal
                     PasswordSalt = hmac.Key,
                     PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password)),
                     CountryCode = countryCode,
-                    PhoneNumber =phoneNumber,
-                    RoleId = 3,
+                    PhoneNumber = phoneNumber,
+                    RoleId = 1,
                     CreatedAt = DateTime.UtcNow,
                 }
                 );

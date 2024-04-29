@@ -9,7 +9,10 @@ namespace TaxiBookingService.Logic.User.Interfaces
 {
     public interface IRideLogic
     {
-        Task GetDriverAsync(int rideid);
-        Task<decimal> CalculateFare(decimal pickUpLat, decimal pickUpLong, decimal dropOffLat, decimal dropOffLong);
+        Task<string> GetDriverAsync(int rideid);
+        Task<decimal> CalculateFare(Location pickUpLocation, Location dropOffLocation);
+        Task<decimal> CalculateCancellationFee(int rideId);
+        Task<decimal> CalculateFareWithStop(Location pickupLocation, Location stopLocation, Location dropoffLocation);
+
     }
 }

@@ -21,6 +21,9 @@ namespace TaxiBookingService.Dal.Entities
         [Column(TypeName = "float")]
         public float? CustomerRating { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal PenaltyFee { get; set; }
+
         public virtual User User { get; set; }
 
         public ICollection<Ride> Rides { get; set; }

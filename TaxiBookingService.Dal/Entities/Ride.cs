@@ -53,7 +53,7 @@ namespace TaxiBookingService.Dal.Entities
 
         [Column(TypeName = "datetime2")]
         public DateTime? ModifiedAt { get; set; }
-
+        public int VerificationPin { get; set; }
         public virtual Driver Driver { get; set; }
         public virtual Customer Customer { get; set; }
         public virtual TaxiType TaxiType { get; set; }

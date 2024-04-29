@@ -12,15 +12,9 @@ using TaxiBookingService.Dal.Repositories;
 namespace TaxiBookingService.Dal.Interfaces
 {
 
-    public interface ICustomerRepository<T>
+    public interface ICustomerRepository : IRepository<Customer>
     {
-        Task UpdateRefreshToken(T user, RefreshToken refreshToken);
-        Task<int> Register(User request, byte[] passwordHash, byte[] passwordSalt);
-        Task<T> GetByEmail(string email);
-        Task<T> GetByToken(string token);
-        Task<T> GetById(int id);
-        Task Login(T entity);
-        Task Logout(T entity);
-        Task Update(Customer customer);    
+        Task<Customer> GetByToken(string token);
+        Task<Customer> GetById(int id);
     }
 }

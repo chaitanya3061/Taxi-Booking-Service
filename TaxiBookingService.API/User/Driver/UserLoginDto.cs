@@ -7,7 +7,7 @@ using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.User.Driver
 {
-    public class DriverLoginDto
+    public class UserLoginDto
     {
         //[EmailValidation]
         public string Email { get; set; }

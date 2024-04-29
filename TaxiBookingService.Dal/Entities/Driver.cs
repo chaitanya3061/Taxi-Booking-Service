@@ -29,9 +29,6 @@ namespace TaxiBookingService.Dal.Entities
         [ForeignKey("User")]
         public int UserId { get; set; }
 
-
-        public bool IsActive { get; set; }
-
         [ForeignKey("DriverStatus")]
         public int DriverStatusId { get; set; }
 

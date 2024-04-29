@@ -11,11 +11,11 @@ namespace TaxiBookingService.Dal.Repositories
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private IDriverRepository<Driver> _DriverRepository;
-        private ICustomerRepository<Customer> _CustomerRepository;
+        private IDriverRepository _DriverRepository;
+        private ICustomerRepository _CustomerRepository;
         private IRideRepository _RideRepository;
         private ILocationRepository _LocationRepository;
-        private IAdminRepository<Admin> _AdminRepository;
+        private IAdminRepository _AdminRepository;
         private ITariffChargeRepository _TariffChargeRepository;
         private IRejectedRideRepository _RejectedRideRepository;
         private ITaxiRepository _TaxiRepository;
@@ -25,7 +25,8 @@ namespace TaxiBookingService.Dal.Repositories
         private IPaymentRepository _PaymentRepository;
         private ITrustedContactRepository _TrustedContactRepository;
         private IUserRepository _UserRepository;
-
+        private IPaymentMethodRepository _PaymentMethodRepository;
+        private ITaxiTypeRepository _TaxiTypeRepository;
 
         private readonly TaxiBookingServiceDbContext _context;
         public UnitOfWork(TaxiBookingServiceDbContext context)
@@ -35,9 +36,9 @@ namespace TaxiBookingService.Dal.Repositories
 
         public IUserRepository UserRepository => _UserRepository = new UserRepository(_context);
 
-        public IDriverRepository<Driver> DriverRepository => _DriverRepository = new DriverRepository(_context);
+        public IDriverRepository DriverRepository => _DriverRepository = new DriverRepository(_context);
 
-        public ICustomerRepository<Customer> CustomerRepository => _CustomerRepository= new CustomerRepository(_context);
+        public ICustomerRepository CustomerRepository => _CustomerRepository= new CustomerRepository(_context);
 
         public IRideRepository RideRepository => _RideRepository=new RideRepository(_context);
 
@@ -56,7 +57,10 @@ namespace TaxiBookingService.Dal.Repositories
 
         public ITrustedContactRepository TrustedContactRepository => _TrustedContactRepository = new TrustedContactRepository(_context);
 
-        public IAdminRepository<Admin> AdminRepository => _AdminRepository ??= new AdminRepository(_context);
+        public IAdminRepository AdminRepository => _AdminRepository ??= new AdminRepository(_context);
+
+        public IPaymentMethodRepository PaymentMethodRepository => _PaymentMethodRepository ??= new PaymentMethodRepository(_context);
+        public ITaxiTypeRepository TaxiTypeRepository => _TaxiTypeRepository ??= new TaxiTypeRepository(_context);
 
         public Task<int> SaveChangesAsync()
         {

@@ -15,7 +15,7 @@ namespace TaxiBookingService.API.User.Customer
         [LocationValidation]
         public string PickupLocation { get; set; }
 
-        [LocationValidation]//documentation comments
+        [LocationValidation]
         [DifferentLocation(nameof(PickupLocation), ErrorMessage = AppConstant.MismatchLocation)]
         public string DropoffLocation { get; set; }
 

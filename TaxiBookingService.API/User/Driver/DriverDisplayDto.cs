@@ -12,5 +12,7 @@ namespace TaxiBookingService.API.User.Driver
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public float DriverRating { get; set; }
+        public string EstimatedTimeArrival { get; set; }
+        public int VerificationPin {  get; set; }
     }
 }

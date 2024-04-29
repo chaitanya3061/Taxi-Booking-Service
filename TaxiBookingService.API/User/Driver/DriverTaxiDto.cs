@@ -15,6 +15,6 @@ namespace TaxiBookingService.API.User.Driver
 
         public string Color { get; set; }
 
-        public string TaxiType { get; set; } 
+        public int TaxiTypeId { get; set; } 
     }
 }

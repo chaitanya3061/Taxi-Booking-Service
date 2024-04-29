@@ -1,15 +1,16 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-//namespace TaxiBookingService.Common.Enums
-//{
-//    public enum UserRole
-//    {
-//       Admin,
-//       Driver,
-//       Customer
-//    }
-//}
+namespace TaxiBookingService.Common.Enums
+{
+    public enum UserRole
+    {
+        Admin,
+        Driver,
+        Customer
+    }
+}
+

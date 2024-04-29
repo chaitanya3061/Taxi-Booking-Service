@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Xml.Schema;
 using TaxiBookingService.API.User.Customer;
 using TaxiBookingService.API.User.Driver;
+using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 
@@ -23,7 +24,7 @@ namespace TaxiBookingService.Dal.Repositories
 
         public async Task<Ride> GetById(int id)
         {
-            return await _context.Ride.Include(x=>x.PickupLocation).Include(x=>x.DropoffLocation).FirstOrDefaultAsync(x=>x.Id==id);
+            return await _context.Ride.Include(x=>x.PickupLocation).Include(x=>x.DropoffLocation).Include(x => x.Payment).FirstOrDefaultAsync(x=>x.Id==id);
         }
 
         public async Task<int> GetStatus(int rideId)
@@ -42,17 +43,20 @@ namespace TaxiBookingService.Dal.Repositories
             _context.Entry(ride).State = EntityState.Modified;
             await _context.SaveChangesAsync();
         }
-        public async Task<(decimal latitude, decimal longitude)> GetRideLongLat(int Id)
+        public async Task<Location> GetRideLongLat(int Id)
         {
             var ride = await _context.Ride.FindAsync(Id);
             var result = await _context.Location.FindAsync(ride.PickupLocationId);
-            return (result.Latitude, result.Longitude);
+            return new Location() {Latitude= result.Latitude,Longitude= result.Longitude };
         }
 
         public async Task<int> GetDriverByRideId(int rideId)
         {
-            var ride= await _context.Ride.FindAsync(rideId);
-            return ride.DriverId.Value;
+            var driverId= await _context.Ride
+               .Where(r => r.Id == rideId)
+               .Select(r => r.DriverId)
+               .FirstOrDefaultAsync();
+            return driverId.Value;
         }
         public async Task<int> GetCustomerByRideId(int rideId)
         {
@@ -67,16 +71,23 @@ namespace TaxiBookingService.Dal.Repositories
 
         public async Task<List<Ride>> GetAllPendingRides()
         {
-            return await _context.Ride.Where(x => x.RideStatusId == 1).ToListAsync();
+            return await _context.Ride.Where(x => x.RideStatusId == AppConstant.Searching).ToListAsync();
         }
 
         public async Task<List<Ride>> GetAllCustomerRides(int customerId)
         {
-            return await _context.Ride.Where(x => x.CustomerId == customerId && x.RideStatusId == 4).Include(x => x.TaxiType).Include(x => x.Driver.User).Include(x => x.PickupLocation).Include(x => x.DropoffLocation).ToListAsync();
+            return await _context.Ride
+        .Where(x => x.CustomerId == customerId &&
+                   (x.RideStatusId == AppConstant.RideCompleted || x.RideStatusId == AppConstant.Cancelled))
+        .Include(x => x.TaxiType)
+        .Include(x => x.Driver.User)
+        .Include(x => x.PickupLocation)
+        .Include(x => x.DropoffLocation)
+        .ToListAsync();
         }
 
 
-        public async Task<int> BookRide(Location pickUp, Location dropOff, CustomerBookRideDto request, int customerId)//dto for paramaetrs
+        public async Task<int> BookRide(Location pickUp, Location dropOff, CustomerBookRideDto request, int customerId)
         {
             var taxiType = await _context.TaxiType.FirstOrDefaultAsync(r => r.Name.ToLower() == request.TaxiType.ToLower());
             var ride = new Ride
@@ -86,10 +97,10 @@ namespace TaxiBookingService.Dal.Repositories
                 DropoffLocation = new Location { Longitude = dropOff.Longitude, Latitude = dropOff.Latitude },
                 TaxiTypeId = taxiType.Id,
                 StartTime = DateTime.UtcNow,
-                RideStatusId = 1
+                RideStatusId = AppConstant.Searching,
             };
             _context.Ride.Add(ride);
-            await _context.SaveChangesAsync();//checking no of save chnages tracking records
+            await _context.SaveChangesAsync();
             return ride.Id;
         }
 

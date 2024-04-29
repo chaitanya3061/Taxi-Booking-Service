@@ -12,22 +12,22 @@ namespace TaxiBookingService.API.User.Driver
         [RequiredValidation]
         public string Name { get; set; }
 
-        [EmailValidation]
+        //[EmailValidation]
         public string Email { get; set; }
 
 
-        [RequiredValidation]
+        //[RequiredValidation]
         public string Password { get; set; }
 
-        [RequiredValidation]
+        //[RequiredValidation]
         public string CountryCode { get; set; }
 
 
-        [PhoneNumberValidation]
+        //[PhoneNumberValidation]
         public string PhoneNumber { get; set; }
 
 
-        [LicenceNumberValidation]
+        //[LicenceNumberValidation]
         public string LicenseNumber { get; set; }
     }
 }

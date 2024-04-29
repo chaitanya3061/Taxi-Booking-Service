@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using System.Security.Authentication;
 using TaxiBookingService.API.User.Admin;
 using TaxiBookingService.Common.AssetManagement.Common;
-//using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Logic.User.Interfaces;
@@ -12,59 +9,22 @@ using static TaxiBookingService.Common.CustomException;
 
 namespace TaxiBookingService.Controller.User
 {
-    [Route("api/Admin")]
+    [Route("api/admin")]
     [ApiController]
 
     public class AdminController : ControllerBase
     {
-        private readonly IAdminLogic<Admin> _AdminLogic;
+        private readonly IAdminLogic _AdminLogic;
         private readonly ILoggerAdapter _logger;
 
-        public AdminController(IAdminLogic<Admin> AdminService, ILoggerAdapter logger)
+        public AdminController(IAdminLogic AdminService, ILoggerAdapter logger)
         {
             _AdminLogic = AdminService;
             _logger = logger;
         }
 
-        [HttpPost("login")]
-        public async Task<ActionResult> Login(AdminLoginDto request)
-        {
-            try
-            {
-                var result = await _AdminLogic.Login(request);
-                _logger.LogInformation($"{AppConstant.LoginSuccess} {request.Email}");
-                return Ok(result);
-            }
-            catch (Common.CustomException.AuthenticationException ex)
-            {
-                _logger.LogError($"{AppConstant.Error}: {ex.Message}", ex);
-                return Unauthorized($"{AppConstant.Error}: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-        }
-
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
-        {
-            try
-            {
-                await _AdminLogic.Logout();
-                _logger.LogInformation(AppConstant.LogoutSuccess);
-                return Ok(AppConstant.LogoutSuccess);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-        }
-
-
-        [HttpPost("addcancellationreason")]
+        [Authorize(Roles = "Admin")]
+        [HttpPost("reasons/cancellation/add")]
         public async Task<IActionResult> AddCancellationReason(AdminManageReasonDto request)
         {
             try
@@ -79,7 +39,9 @@ namespace TaxiBookingService.Controller.User
                 return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
             }
         }
-        [HttpDelete("deletecancellationreason/{id}")]
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("reasons/cancellation/{id}")]
         public async Task<IActionResult> DeleteCancellationReason(int id)
         {
             try
@@ -88,6 +50,10 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation(AppConstant.Delete);
                 return Ok(AppConstant.Delete);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound($"{AppConstant.ReasonNotFound}{ex.Message}");
+            }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
@@ -95,7 +61,8 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPut("Updatecancellationreason/{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpPut("reasons/cancellation/{id}")]
         public async Task<IActionResult> UpdateCancellationReason(AdminManageReasonDto request,int id)
         {
             try
@@ -104,6 +71,10 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation(AppConstant.Update);
                 return Ok(AppConstant.Update);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound($"{AppConstant.ReasonNotFound}{ex.Message}");
+            }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
@@ -111,8 +82,8 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-
-        [HttpDelete("deleteuser/{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("users/{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
             try
@@ -121,6 +92,10 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation(AppConstant.Delete);
                 return Ok(AppConstant.Delete);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound($"{AppConstant.UserNotFound}{ex}");
+            }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
@@ -128,7 +103,8 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPut("UpdateUser/{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateUser(AdminManageUserDto request, int id)
         {
             try
@@ -137,27 +113,15 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation(AppConstant.Update);
                 return Ok(AppConstant.Update);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound($"{AppConstant.UserNotFound}{ex}");
+            }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
                 return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
             }
         }
-
-        //[HttpPut("ViewRideHistory")]
-        //public async Task<IActionResult> ViewRideHistory()
-        //{
-        //    try
-        //    {
-        //        await _AdminLogic.ViewRideHistory();
-        //        _logger.LogInformation(AppConstant.RetrievedRideSuccess);
-        //        return Ok(AppConstant.UpdateRetrievedRideSuccess);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-        //        return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-        //    }
-        //}
     }
 }

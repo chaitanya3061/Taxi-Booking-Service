@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
+using TaxiBookingService.Client.DistanceMatrix;
+using TaxiBookingService.Client.DistanceMatrix.Interfaces;
 using TaxiBookingService.Client.Geocoding;
 using TaxiBookingService.Client.Geocoding.Interfaces;
 using TaxiBookingService.Common.Utilities;
@@ -50,13 +51,15 @@ namespace TaxiBookingService.Host
 
             services.AddHttpContextAccessor();
             services.AddSingleton<ILoggerAdapter, SerilogAdapter>();
-            services.AddTransient<IDriverLogic<Driver>, DriverLogic>();
-            services.AddTransient<IDriverRepository<Driver>, DriverRepository>();
-            services.AddTransient<IExternalHttpClient, ExternalApiClient>();
-            services.AddTransient<ICustomerLogic<Customer>, CustomerLogic>();
-            services.AddTransient<ICustomerRepository<Customer>, CustomerRepository>();
-            services.AddTransient<IAdminLogic<Admin>, AdminLogic>();
-            services.AddTransient<IAdminRepository<Admin>, AdminRepository>();
+            services.AddTransient<IDriverLogic, DriverLogic>();
+            services.AddTransient<IUserLogic,UserLogic>();
+            services.AddTransient<IDriverRepository, DriverRepository>();
+            services.AddTransient<IGeoCodingHttpClient, GeoCodingHttpClient>();
+            services.AddTransient<IDistanceMatrixHttpClient, DistanceMatrixHttpClient>();
+            services.AddTransient<ICustomerLogic, CustomerLogic>();
+            services.AddTransient<ICustomerRepository, CustomerRepository>();
+            services.AddTransient<IAdminLogic, AdminLogic>();
+            services.AddTransient<IAdminRepository, AdminRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddTransient<IRideLogic, RideLogic>();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>

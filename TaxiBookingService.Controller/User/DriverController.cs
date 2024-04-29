@@ -1,16 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using System.Net;
-using System.Security.Authentication;
-using System.Text.Json;
-using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
-//using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal.Entities;
-using TaxiBookingService.Logic.User;
 using TaxiBookingService.Logic.User.Interfaces;
 using static TaxiBookingService.Common.CustomException;
 
@@ -21,10 +14,10 @@ namespace TaxiBookingService.Controller.User
 
     public class DriverController : ControllerBase
     {
-        private readonly IDriverLogic<Driver> _DriverLogic;
+        private readonly IDriverLogic _DriverLogic;
         private readonly ILoggerAdapter _logger;
 
-        public DriverController(IDriverLogic<Driver> DriverService, ILoggerAdapter logger)
+        public DriverController(IDriverLogic DriverService, ILoggerAdapter logger)
         {
             _DriverLogic = DriverService;
             _logger = logger;
@@ -36,8 +29,12 @@ namespace TaxiBookingService.Controller.User
             try
             {
                 var userId = await _DriverLogic.Register(request);
-                _logger.LogInformation(AppConstant.RegistrationSuccess);
+                _logger.LogInformation($"{AppConstant.RegistrationSuccess} id: {userId}") ;
                 return Ok($"{AppConstant.RegistrationSuccess} id: {userId}");
+            }
+            catch (EmailAlreadyExists ex)
+            {
+                return Conflict($"{ex.Message} {AppConstant.EmailAlreadyExists}");
             }
             catch (Exception ex)
             {
@@ -46,69 +43,7 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPost("login")]
-        public async Task<ActionResult> Login(DriverLoginDto request)
-        {
-            try
-            {
-                var result = await _DriverLogic.Login(request);
-                _logger.LogInformation($"{AppConstant.LoginSuccess} {request.Email}");
-                return Ok(result);
-            }
-            catch (Common.CustomException.AuthenticationException ex)
-            {
-                _logger.LogError($"{AppConstant.Error}: {ex.Message}", ex);
-                return Unauthorized($"{AppConstant.Error}: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-        }
-
-        [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefeshToken()
-        {
-            try
-            {
-                var result = await _DriverLogic.RefreshToken();
-                _logger.LogInformation(AppConstant.TokenRefreshSuccess);
-                return Ok(result);
-            }
-            catch (TokenExpiredException ex)
-            {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
-                return BadRequest($"{AppConstant.TokenExpired} : {ex.Message}");
-            }
-            catch (InvalidTokenException ex)
-            {
-                _logger.LogError($"{AppConstant.Error} :{ex.Message}", ex);
-                return Unauthorized($"{AppConstant.Error}: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-
-        }
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
-        {
-            try
-            {
-                await _DriverLogic.Logout();
-                _logger.LogInformation(AppConstant.LogoutSuccess);
-                return Ok(AppConstant.LogoutSuccess);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
-            }
-        }
-
+        [Authorize(Roles = "Driver")]
         [HttpPost("addtaxi")]
         public async Task<ActionResult<int>> AddTaxi(DriverTaxiDto taxi)
         {
@@ -116,7 +51,7 @@ namespace TaxiBookingService.Controller.User
             {
                 var addedTaxiId = await _DriverLogic.AddTaxi(taxi);
                 _logger.LogInformation($"{AppConstant.TaxiAdded}. taxi ID: {addedTaxiId}");
-                return Ok(addedTaxiId);
+                return Ok($"{AppConstant.TaxiAdded}. taxi ID: {addedTaxiId}");
             }
             catch (Exception ex)
             {
@@ -124,14 +59,20 @@ namespace TaxiBookingService.Controller.User
                 return BadRequest();
             }
         }
-      
-        [HttpPatch("accept/{rideId}")]
+
+        [Authorize(Roles = "Driver")]
+        [HttpPatch("rides/accept/{rideId}")]
         public async Task<IActionResult> Accept(int rideId)
         {
             try
             {
-                var results = await _DriverLogic.Accept(rideId);
-                return Ok(results);
+                var result = await _DriverLogic.Accept(rideId);
+                _logger.LogInformation($"{result} rideid: {rideId}");
+                return Ok($"{result} rideid: {rideId}");
+            }
+            catch(InvalidOperationException ex)
+            {
+                return Conflict($"{ex.Message} {AppConstant.DriverNotAssignedToRide}");
             }
             catch (Exception ex)
             {
@@ -140,13 +81,19 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPatch("decline/{rideId}")]
+        [Authorize(Roles = "Driver")]
+        [HttpPatch("rides/decline/{rideId}")]
         public async Task<IActionResult> Decline(int rideId)
         {
             try
             {
-                await _DriverLogic.Decline(rideId);
-                return Ok(AppConstant.Declined);
+                var result=await _DriverLogic.Decline(rideId);
+                _logger.LogInformation($"{result} rideid: {rideId}");
+                return Ok($"{result} rideid: {rideId}");
+            }
+            catch (RideAlreadyAccepted ex)
+            {
+                return Conflict($"{ex.Message} {AppConstant.RideAlreadyAccepted}");
             }
             catch (Exception ex)
             {
@@ -155,13 +102,23 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPatch("startride/{rideId}")]
-        public async Task<IActionResult> StartRide(int rideId)
+        [Authorize(Roles = "Driver")]
+        [HttpPatch("rides/start/{rideId}")]
+        public async Task<IActionResult> StartRide(int rideId,int verificationPin)
         {
             try
             {
-                await _DriverLogic.StartRide(rideId);
-                return Ok(AppConstant.RideStarted);
+                var result=await _DriverLogic.StartRide(rideId, verificationPin);
+                _logger.LogInformation($"{result} rideid: {rideId}");
+                return Ok($"{result} rideid: {rideId}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict($"{ex.Message} {AppConstant.DriverNotAssignedToRide}");
+            }
+            catch (InvalidverificationPin ex)
+            {
+                return BadRequest($"{ex.Message} {AppConstant.InvalidverificationPin}");
             }
             catch (Exception ex)
             {
@@ -170,13 +127,23 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPatch("endride/{rideId}")]
+        [Authorize(Roles = "Driver")]
+        [HttpPatch("rides/end/{rideId}")]
         public async Task<IActionResult> EndRide(int rideId)
         {
             try
             {
-                var fare=await _DriverLogic.EndRide(rideId);
-                return Ok($"{AppConstant.RideEnded} fare: {fare}" );
+                var result=await _DriverLogic.EndRide(rideId);
+                _logger.LogInformation(result);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(AppConstant.DriverNotAssignedToRide);
+            }
+            catch(PaymentNotCompleted ex)
+            {
+                return StatusCode(AppConstant.PaymentRequired, AppConstant.PaymentNotCompleted);
             }
             catch (Exception ex)
             {
@@ -184,18 +151,20 @@ namespace TaxiBookingService.Controller.User
                 return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
             }
         }
-        [HttpPatch("cancelride/{rideId}")]
+
+        [Authorize(Roles = "Driver")]
+        [HttpPatch("rides/{rideId}/cancel")]
         public async Task<IActionResult> CancelRide(int rideId,string reason)
         {
             try
             {
-                await _DriverLogic.CancelRide(rideId,reason);
-                return Ok($"{AppConstant.DriverCancelled}");
+                var result=await _DriverLogic.CancelRide(rideId,reason);
+                _logger.LogInformation($"{result} rideid: {rideId}");
+                return Ok($"{result} rideid: {rideId}");
             }
             catch(CannotCancel ex)
             {
-                _logger.LogError(AppConstant.RideNotFound, ex);
-                return Conflict(AppConstant.RideNotFound);
+                return NotFound($"{ex.Message} {AppConstant.CannotCancel}");
             }
             catch (Exception ex)
             {
@@ -204,18 +173,20 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpPost("rating/{rideId}")]
-        public async Task<IActionResult> FeedBack(DriverRatingDto rating)
+
+        [Authorize(Roles = "Driver")]
+        [HttpPost("rides/{rideId}/rating")]
+        public async Task<IActionResult> FeedBack(DriverRatingDto request)
         {
             try
             {
-                await _DriverLogic.FeedBack(rating);
-                return Ok($"{AppConstant.Feedback}");
+                var result=await _DriverLogic.FeedBack(request);
+                _logger.LogInformation($"{result} rideid: {request.RideId}");
+                return Ok(result);
             }
             catch (NotFoundException ex)
             {
-                _logger.LogError(AppConstant.RideNotFound, ex);
-                return NotFound();
+                return NotFound($"{ex.Message} {AppConstant.RideNotFound}");
             }
             catch (Exception ex)
             {
@@ -224,7 +195,8 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-        [HttpGet("ridehistory")]
+        [Authorize(Roles = "Driver")]
+        [HttpGet("rides/history")]
         public async Task<IActionResult> RideHistory()
         {
             try
@@ -232,6 +204,10 @@ namespace TaxiBookingService.Controller.User
                 var result=await _DriverLogic.RideHistory();
                 return Ok(result);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound($"{ex.Message} {AppConstant.NoridesFound}");
+            }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
@@ -239,14 +215,39 @@ namespace TaxiBookingService.Controller.User
             }
         }
 
-
-        [HttpGet("GetRide")]
-        public async Task<IActionResult> GetRide()
+        [Authorize(Roles = "Driver")]
+        [HttpGet("rides/active")]
+        public async Task<IActionResult> GetActiveRide()
         {
             try
             {
-                var result = await _DriverLogic.GetRide();
+                var result = await _DriverLogic.GetActiveRide();
                 return Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound($"{ex.Message} {AppConstant.NoridesFound}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+            }
+        }
+
+        [Authorize(Roles = "Driver")]
+        [HttpPatch("confirmpayment/{rideId}")]
+        public async Task<IActionResult> ConfirmRidePayment(int rideId)
+        {
+            try
+            {
+                var result =await _DriverLogic.ConfirmRidePayment(rideId);
+                _logger.LogInformation($"{result} rideid: {rideId}");
+                return Ok($"{result} rideid: {rideId}");
+            }
+            catch (NotStarted ex)
+            {
+                return Conflict($"{ex.Message} {AppConstant.DriverNotYetStarted}");
             }
             catch (Exception ex)
             {
