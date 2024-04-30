@@ -1,12 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Schema;
+using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Customer;
-using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
@@ -71,14 +65,14 @@ namespace TaxiBookingService.Dal.Repositories
 
         public async Task<List<Ride>> GetAllPendingRides()
         {
-            return await _context.Ride.Where(x => x.RideStatusId == AppConstant.Searching).ToListAsync();
+            return await _context.Ride.Where(x => x.RideStatusId == (int)Common.Enums.RideStatus.Searching).ToListAsync();
         }
 
         public async Task<List<Ride>> GetAllCustomerRides(int customerId)
         {
             return await _context.Ride
         .Where(x => x.CustomerId == customerId &&
-                   (x.RideStatusId == AppConstant.RideCompleted || x.RideStatusId == AppConstant.Cancelled))
+                   (x.RideStatusId == (int)Common.Enums.RideStatus.Completed || x.RideStatusId == (int)Common.Enums.RideStatus.Cancelled))
         .Include(x => x.TaxiType)
         .Include(x => x.Driver.User)
         .Include(x => x.PickupLocation)
@@ -97,7 +91,7 @@ namespace TaxiBookingService.Dal.Repositories
                 DropoffLocation = new Location { Longitude = dropOff.Longitude, Latitude = dropOff.Latitude },
                 TaxiTypeId = taxiType.Id,
                 StartTime = DateTime.UtcNow,
-                RideStatusId = AppConstant.Searching,
+                RideStatusId = (int)Common.Enums.RideStatus.Searching,
             };
             _context.Ride.Add(ride);
             await _context.SaveChangesAsync();
@@ -107,6 +101,50 @@ namespace TaxiBookingService.Dal.Repositories
         public async Task<Ride> GetRide(int driverId)
         {
            return await _context.Ride.Include(x=>x.PickupLocation).Include(x => x.DropoffLocation).Include(x => x.TaxiType).FirstOrDefaultAsync(x => x.DriverId == driverId && x.RideStatusId == 1 && x.Driver.DriverStatusId==2);
+        }
+
+        public Task<List<Ride>> GetCustomerRides(int Customerid, RideQueryParametersDto parameters)
+        {
+            var query = _context.Ride.Where(r => r.CustomerId == Customerid);
+
+            if (!string.IsNullOrEmpty(parameters.SortField))
+            {
+                if (parameters.SortOrder == "desc")
+                {
+                    query = query.OrderByDescending(r => EF.Property<object>(r, parameters.SortField));
+                }
+                else
+                {
+                    query = query.OrderBy(r => EF.Property<object>(r, parameters.SortField));
+                }
+            }
+
+            if (!string.IsNullOrEmpty(parameters.SearchQuery))
+            {
+                query = query.Where(r => r.Driver.User.Name.Contains(parameters.SearchQuery));                            
+            }
+
+            query = query.Skip((parameters.Limit - 1) * parameters.OffSet)
+                         .Take(parameters.OffSet);
+
+            //filter 
+            if (parameters.FilterByStatus.HasValue)
+            {
+                query = query.Where(r => r.RideStatusId == parameters.FilterByStatus);
+            }
+
+            var result = query.ToListAsync();
+            return result;
+        }
+
+        public async Task<bool> IsDriverInRide(int driverId)
+        {
+             return await _context.Ride.AnyAsync(r => r.DriverId == driverId && (r.RideStatusId == (int)Common.Enums.RideStatus.Accepted || r.RideStatusId == (int)Common.Enums.RideStatus.Started));
+        }
+
+        public async Task<bool> HasActiveRideRequest(int customerId)
+        {
+            return await _context.Ride.AnyAsync(r => r.CustomerId == customerId && (r.RideStatusId == (int)Common.Enums.RideStatus.Searching));
         }
     }
 }

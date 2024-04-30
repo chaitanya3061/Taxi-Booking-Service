@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Admin;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Utilities;
@@ -29,14 +32,14 @@ namespace TaxiBookingService.Controller.User
         {
             try
             {
-                await _AdminLogic.AddCancellationReason(request);
+                var result=await _AdminLogic.AddCancellationReason(request);
                 _logger.LogInformation(AppConstant.ReasonAdded);
-                return Ok(AppConstant.ReasonAdded);
+                return Ok($"{AppConstant.ReasonAdded} ReasonId:-{result}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -52,12 +55,12 @@ namespace TaxiBookingService.Controller.User
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{AppConstant.ReasonNotFound}{ex.Message}");
+                return NotFound($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -69,16 +72,16 @@ namespace TaxiBookingService.Controller.User
             {
                 await _AdminLogic.UpdateCancellationReason(request,id);
                 _logger.LogInformation(AppConstant.Update);
-                return Ok(AppConstant.Update);
+                return Ok($"{AppConstant.Update} ReasonId:-{id}");
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{AppConstant.ReasonNotFound}{ex.Message}");
+                return NotFound($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -94,12 +97,12 @@ namespace TaxiBookingService.Controller.User
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{AppConstant.UserNotFound}{ex}");
+                return NotFound($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -111,16 +114,32 @@ namespace TaxiBookingService.Controller.User
             {
                 await _AdminLogic.UpdateUser(request, id);
                 _logger.LogInformation(AppConstant.Update);
-                return Ok(AppConstant.Update);
+                return Ok($"{AppConstant.Update} ReasonId:-{id}");
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{AppConstant.UserNotFound}{ex}");
+                return NotFound($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
+            }
+        }
+
+        [HttpPost("GetCustomerRides/{CustomerId}")]
+        public async Task<IActionResult> GetCustomerRides(int CustomerId,RideQueryParametersDto parameters)
+        {
+            try
+            {
+                var result =await _AdminLogic.GetCustomerRides(CustomerId, parameters);
+                _logger.LogInformation(AppConstant.CustomerRidesRetrivedSuccess);
+                return Ok(result);
+            }          
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
     }

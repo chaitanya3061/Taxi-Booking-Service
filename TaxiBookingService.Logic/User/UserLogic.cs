@@ -128,7 +128,7 @@ namespace TaxiBookingService.Logic.User
             }
             else if (!VerifyPasswordHash(request.Password, user.PasswordHash,user.PasswordSalt))
             {
-                throw new AuthenticationException(AppConstant.PasswordNotCorrect, _loggerAdapter);
+                throw new AuthenticationException(AppConstant.WrongPassword, _loggerAdapter);
             }
             await _unitOfWork.UserRepository.Login(user);
             string token = CreateToken(user);

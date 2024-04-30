@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TaxiBookingService.Common\TaxiBookingService.Common.csproj" />
     <ProjectReference Include="..\TaxiBookingService.Dal\TaxiBookingService.Dal.csproj" />
   </ItemGroup>
 

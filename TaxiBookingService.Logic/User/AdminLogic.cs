@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Admin;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Utilities;
@@ -90,6 +91,12 @@ namespace TaxiBookingService.Logic.User
             await _unitOfWork.UserRepository.Update(exisitingUser);
             await _unitOfWork.SaveChangesAsync();
             return exisitingUser.Id;
+        }
+
+        public async Task<List<Ride>> GetCustomerRides(int CustomerId, RideQueryParametersDto request)
+        {
+            var result = await _unitOfWork.RideRepository.GetCustomerRides(CustomerId, request);
+            return result;
         }
     }
 }

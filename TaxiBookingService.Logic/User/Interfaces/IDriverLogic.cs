@@ -21,6 +21,7 @@ namespace TaxiBookingService.Logic.User.Interfaces
         Task<string> FeedBack(DriverRatingDto rating);
         Task<List<DriverRideDisplayDto>> RideHistory();
         Task<DriverGetRideDto> GetActiveRide();
-        Task<string> ConfirmRidePayment(int  rideId);  
+        Task<string> ConfirmRidePayment(int  rideId);
+        Task<Common.Enums.DriverStatus> UpdateAvailiability();
     }
 }

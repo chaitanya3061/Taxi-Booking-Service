@@ -16,5 +16,6 @@ namespace TaxiBookingService.Dal.Interfaces
     {
         Task<Customer> GetByToken(string token);
         Task<Customer> GetById(int id);
+        Task<Customer> GetByEmail(string email);
     }
 }

@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace TaxiBookingService.Common.Enums
 {
-    public enum UserRole
+    public enum PaymentMethod
     {
-        Admin=1,
-        Customer,
-        Driver
+        Wallet = 1,
+        Cash,
     }
 }
-

@@ -4,13 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TaxiBookingService.Common.Enums
+namespace TaxiBookingService.Dal.Interfaces
 {
-    public enum UserRole
+    public interface IFactoryRepository 
     {
-        Admin=1,
-        Customer,
-        Driver
     }
 }
-

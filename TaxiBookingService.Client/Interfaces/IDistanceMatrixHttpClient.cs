@@ -1,7 +1,6 @@
-﻿
-using TaxiBookingService.Dal.Entities;
+﻿using TaxiBookingService.Dal.Entities;
 
-namespace TaxiBookingService.Client.DistanceMatrix.Interfaces
+namespace TaxiBookingService.Client.Interfaces
 {
     public interface IDistanceMatrixHttpClient
     {

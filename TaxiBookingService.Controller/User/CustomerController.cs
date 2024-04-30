@@ -35,13 +35,13 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation(AppConstant.RegistrationSuccess);
                 return Ok($"{AppConstant.RegistrationSuccess} id: {userId}");
             }
-            catch (EmailAlreadyExists ex)
+            catch (EmailAlreadyExistsExecption ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.EmailAlreadyExists}");
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
+                _logger.LogError($"{ex.Message}", ex);
                 return BadRequest();
             }
         }
@@ -53,35 +53,76 @@ namespace TaxiBookingService.Controller.User
             try
             {
                 var result = await _CustomerLogic.BookRide(request);
-                _logger.LogInformation($"{AppConstant.RequestSended}:-{result}");
-                return Ok($"{AppConstant.RequestSended}:-{result}");
+                _logger.LogInformation($"{AppConstant.RequestSent}:-{result}");
+                return Ok($"{AppConstant.RequestSent}:-{result}");
+            }
+            catch(CustomerAlreadyInSearchRideException ex)
+            {
+                return Conflict($"{ex.Message} ");
+            }
+            catch(InsufficientFundsException ex)
+            {
+                return BadRequest($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
-
         }
 
         [Authorize(Roles = "Customer")]
-        [HttpGet("rides/{rideId}/matched-driver")]
-        public async Task<IActionResult> GetMatchedDriverDetails(int rideId)
+        [HttpPost("rides/schedule-ride")]
+        public async Task<IActionResult> ScheduleRide(CustomerBookRideDto request)
         {
             try
             {
-                var result = await _CustomerLogic.GetMatchedDriver(rideId);
-                _logger.LogInformation(AppConstant.RequestSended);
-                return Ok(result);
-            }
-            catch (NomatchesFound ex)
-            {
-                return NotFound($"{ex.Message} {AppConstant.Nomatching}");
+                var result = await _CustomerLogic.ScheduleRide(request);
+                _logger.LogInformation($"{AppConstant.RequestSent}:-{result}");
+                return Ok($"{AppConstant.RequestSent}:-{result}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
+            }
+        }
+
+        [Authorize(Roles = "Customer")]
+        [HttpGet("rides/GetAllActiveSchedulerides")]
+        public async Task<IActionResult> GetAllActiveSchedulerides()
+        {
+            try
+            {
+                var result = await _CustomerLogic.GetAllActiveSchedulerides();
+                _logger.LogInformation($"{result}");
+                return Ok($"{result}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
+            }
+        }
+
+        [Authorize(Roles = "Customer")]
+        [HttpGet("rides/{rideId}/driver-allocated")]
+        public async Task<IActionResult> GetAllocatedDriverDetails(int rideId)
+        {
+            try
+            {
+                var result = await _CustomerLogic.GetAllocatedDriver(rideId);
+                _logger.LogInformation(AppConstant.RetrievedDriverSuccess);
+                return Ok(result);
+            }
+            catch(NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
 
         }
@@ -95,14 +136,14 @@ namespace TaxiBookingService.Controller.User
                 await _CustomerLogic.CancelRide(rideId, reason);
                 return Ok($"{AppConstant.CustomerCancelled}");
             }
-            catch (CannotCancel ex)
+            catch (CannotCancelException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.CannotCancel}");
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -115,14 +156,18 @@ namespace TaxiBookingService.Controller.User
                 await _CustomerLogic.FeedBack(rating);
                 return Ok($"{AppConstant.Feedback}");
             }
+            catch(RideNotCompletedException ex)
+            {
+                return Conflict($"{ex.Message} ");
+            }
             catch (NotFoundException ex)
             {
-                return NotFound($"{ex.Message} {AppConstant.RideNotFound}");
+                return NotFound($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -137,12 +182,12 @@ namespace TaxiBookingService.Controller.User
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{ex.Message} {AppConstant.NoridesFound}");
+                return NotFound($"{ex.Message} ");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -155,18 +200,22 @@ namespace TaxiBookingService.Controller.User
                 var result = await _CustomerLogic.UpdateDropOffLocation(request);
                 return Ok(result);
             }
-            catch (CannotUpdateDropOff ex)
+            catch(NotFoundException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.CannotUpdateDropOff}");
+                return NotFound(ex.Message);
+            }
+            catch (CannotUpdateDropOffExecption ex)
+            {
+                return Conflict($"{ex.Message} ");
             }
             catch (SameLocationException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.MismatchLocation}");
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -179,10 +228,14 @@ namespace TaxiBookingService.Controller.User
                 var result = await _CustomerLogic.TopUpWallet(amount);
                 return Ok(result);
             }
+            catch(InvalidTopUpAmountException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -198,12 +251,12 @@ namespace TaxiBookingService.Controller.User
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
         [Authorize(Roles = "Customer")]
-        [HttpPost("add-stop/add")]
+        [HttpPost("add-stop/add/{rideId}")]
         public async Task<IActionResult> AddStop(CustomerAddStopDto request)
         {
             try
@@ -211,14 +264,18 @@ namespace TaxiBookingService.Controller.User
                 var result = await _CustomerLogic.AddStop(request);
                 return Ok(result);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
             catch (InvalidOperationException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.CannotAddStopLocation}");
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -231,14 +288,18 @@ namespace TaxiBookingService.Controller.User
                 var result = await _CustomerLogic.DeleteStop(rideId);
                 return Ok(result);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
             catch (InvalidOperationException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.CannotDeleteStopLocation}");
+                return Conflict($"{ex.Message} ");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -251,14 +312,18 @@ namespace TaxiBookingService.Controller.User
                 var result =await _CustomerLogic.MakePayment(rideId);
                 return Ok(result);
             }
-            catch (NotStarted ex)
+            catch (NotFoundException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.RideNotStarted}");
+                return NotFound(ex.Message);
+            }
+            catch (NotStartedException ex)
+            {
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 

@@ -27,19 +27,22 @@ namespace TaxiBookingService.Dal.Repositories
             return await _dbContext.Set<T>().ToListAsync();
         }
 
-        public async Task Add(T entity)
+        public async Task<bool> Add(T entity)
         {
-            await _dbContext.Set<T>().AddAsync(entity);
+            _dbContext.Set<T>().Add(entity);
+            return await _dbContext.SaveChangesAsync() > 0;
         }
 
-        public async Task Delete(T entity)
+        public async Task<bool> Delete(T entity)
         {
-             _dbContext.Set<T>().Remove(entity);
+            _dbContext.Set<T>().Remove(entity);
+            return await _dbContext.SaveChangesAsync() > 0;
         }
 
-        public async Task Update(T entity)
+        public async Task<bool> Update(T entity)
         {
             _dbContext.Set<T>().Update(entity);
+            return await _dbContext.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> Exists(int id)

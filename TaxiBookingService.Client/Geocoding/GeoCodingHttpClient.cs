@@ -1,5 +1,7 @@
-﻿using TaxiBookingService.Client.Geocoding.Interfaces;
+﻿using TaxiBookingService.Client.Interfaces;
+using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Dal.Entities;
+using static TaxiBookingService.Common.CustomException;
 
 namespace TaxiBookingService.Client.Geocoding
 {
@@ -28,7 +30,7 @@ namespace TaxiBookingService.Client.Geocoding
 
                 if (jsonResponse.results.Count == 0)
                 {
-                    throw new Exception("No results found for the provided address.");
+                    throw new Exception(AppConstant.IncorrectAddess);
                 }
 
                 var location = new Location
@@ -40,7 +42,7 @@ namespace TaxiBookingService.Client.Geocoding
             }
             else
             {
-                throw new HttpRequestException($"Failed to retrieve data. Status code: {response.StatusCode}");
+                throw new HttpRequestException($"{AppConstant.ErrorMessage} {response.StatusCode}");
             }
         }
 
@@ -58,14 +60,14 @@ namespace TaxiBookingService.Client.Geocoding
 
                 if (jsonResponse.results.Count == 0)
                 {
-                    throw new Exception("No results found for the provided address.");
+                    throw new Exception(AppConstant.IncorrectAddess);
                 }
                 string  address = jsonResponse.results[0].formatted;
                 return address;
             }
             else
             {
-                throw new HttpRequestException($"Failed to retrieve data. Status code: {response.StatusCode}");
+                throw new HttpRequestException($"{AppConstant.ErrorMessage} {response.StatusCode}");
             }
         }
 

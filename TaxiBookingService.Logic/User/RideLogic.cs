@@ -1,13 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.Client.Geocoding.Interfaces;
-using TaxiBookingService.Common.AssetManagement.Common;
+﻿using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
@@ -26,6 +17,12 @@ namespace TaxiBookingService.Logic.User
             _unitOfWork = unitOfWork;
             _loggerAdapter = loggerAdapter;
         }
+        public decimal GetCommissionRate(string chargeName, List<TariffCharge> tariffCharges)
+        {
+            var charge = tariffCharges.FirstOrDefault(c => c.Name == chargeName);
+            return charge.Value;
+        }
+
         public async Task<Driver> FindNearbyDriverAsync(int rideId)
         {
             var rideStatus = await _unitOfWork.RideRepository.GetStatus(rideId);
@@ -37,6 +34,7 @@ namespace TaxiBookingService.Logic.User
             {
                 var driverLoc = await _unitOfWork.DriverRepository.GetLongLat(driver.UserId);
                 double distance = CalculateDistance(pickUpLoc, driverLoc);
+
                 if (distance < maxDistance)
                 {
                     bool hasRejected = await _unitOfWork.RejectedRideRepository.HasDriverRejectedRide(driver.Id, rideId);
@@ -47,10 +45,12 @@ namespace TaxiBookingService.Logic.User
                 }
             }
             nearbyDrivers = nearbyDrivers.OrderByDescending(x => x.DriverRating).ToList();
+
             if (nearbyDrivers.Count == 0)
             {
                 return null; 
             }
+
             return nearbyDrivers[0];
         }
 
@@ -68,12 +68,13 @@ namespace TaxiBookingService.Logic.User
             {
                 return AppConstant.NodriversFound;
             }
+
             ride.DriverId = driver.Id;
-            driver.DriverStatusId = AppConstant.Unavailable;
+            driver.DriverStatusId = (int)Common.Enums.DriverStatus.UnAvaliable;
             await _unitOfWork.DriverRepository.Update(driver);
             await _unitOfWork.RideRepository.Update(ride);
             await _unitOfWork.SaveChangesAsync();
-            return AppConstant.RequestSended;
+            return AppConstant.RequestSent;
         }
 
         public async Task<decimal> CalculateCancellationFee(int rideId)
@@ -123,9 +124,7 @@ namespace TaxiBookingService.Logic.User
         {
             var fare1 =await CalculateFare(pickupLocation, stopLocation);
             var fare2 = await CalculateFare(stopLocation, dropoffLocation);
-
             decimal fare = fare1+fare2; 
-
             return fare;
         }
 

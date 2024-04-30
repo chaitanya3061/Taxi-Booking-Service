@@ -2,13 +2,14 @@
 using Azure.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using TaxiBookingService.API.User.Customer;
 using TaxiBookingService.API.User.Driver;
-using TaxiBookingService.Client.DistanceMatrix.Interfaces;
-using TaxiBookingService.Client.Geocoding.Interfaces;
+using TaxiBookingService.Client.Interfaces;
 using TaxiBookingService.Common.AssetManagement.Common;
+using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
@@ -60,8 +61,14 @@ namespace TaxiBookingService.Logic.User
 
         private async Task<Customer> GetCustomerFromToken()
         {
-            var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies[AppConstant.refreshToken];
-            var customer = await _unitOfWork.CustomerRepository.GetByToken(loggedInUser);
+            var email = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+            var customer = await _unitOfWork.CustomerRepository.GetByEmail(email.Value);
+
+            if (customer == null)
+            {
+                throw new NotFoundException(AppConstant.CustomerNotFound, _loggerAdapter);
+            }
+
             return customer;
         }
         private int GenerateVerificationPin()
@@ -81,11 +88,12 @@ namespace TaxiBookingService.Logic.User
             return existingRide;
         }
 
-        private async Task UpdateStatus(Ride exisitngRide, Driver exisitngDriver)
+        private async Task UpdateStatus(Ride exisitngRide, Driver exisitngDriver, int? cancellationReasonId)
         {
-            exisitngRide.RideStatusId = AppConstant.Cancelled;
+            exisitngRide.RideStatusId = (int)Common.Enums.RideStatus.Cancelled;
+            exisitngRide.RideCancellationReasonId = cancellationReasonId;
             await _unitOfWork.RideRepository.Update(exisitngRide);
-            exisitngDriver.DriverStatusId = AppConstant.Available;
+            exisitngDriver.DriverStatusId = (int)Common.Enums.DriverStatus.Avaliable;
             await _unitOfWork.DriverRepository.Update(exisitngDriver);
             await _unitOfWork.SaveChangesAsync();
         }
@@ -125,7 +133,7 @@ namespace TaxiBookingService.Logic.User
 
             if(existingRide.PickupLocation.Latitude ==newDropoffLocation.Latitude && existingRide.PickupLocation.Longitude == newDropoffLocation.Longitude)
             {
-                throw new SameLocationException(AppConstant.MismatchLocation,_loggerAdapter);
+                throw new SameLocationException(AppConstant.SameLocation,_loggerAdapter);
             }
 
             var fare = await _rideLogic.CalculateFare(existingRide.PickupLocation,newDropoffLocation);
@@ -135,20 +143,40 @@ namespace TaxiBookingService.Logic.User
             return fare;
         }
 
+        private async Task ValidateBooking(CustomerBookRideDto request, Customer customer,decimal fare)
+        {
+            var isCustomerInSearch = await _unitOfWork.RideRepository.HasActiveRideRequest(customer.Id);
+            if (isCustomerInSearch)
+            {
+                throw new CustomerAlreadyInSearchRideException(AppConstant.CustomerAlreadyInSearchRide, _loggerAdapter);
+            }
+
+            var taxiType = await _unitOfWork.TaxiTypeRepository.GetByName(request.TaxiType);
+            if (taxiType == null)
+            {
+                throw new NotFoundException(AppConstant.TaxiTypeNotFound, _loggerAdapter);
+            }
+
+            if (request.PaymentType.ToLower() == Common.Enums.PaymentMethod.Wallet.ToString().ToLower() && customer.Customerwallet < fare)
+            {
+                throw new InsufficientFundsException(AppConstant.Insufficientfunds, _loggerAdapter);
+            }
+        }
+
         public async Task<int> Register(CustomerRegisterDto request)
         {
             var checkEmail = await _unitOfWork.UserRepository.IsEmail(request.Email);
 
             if (checkEmail)
             {
-                throw new EmailAlreadyExists(AppConstant.EmailAlreadyExists, _loggerAdapter);
+                throw new EmailAlreadyExistsExecption(AppConstant.EmailAlreadyExists, _loggerAdapter);
             }
 
             CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
             var userEntity = _mapper.Map<Dal.Entities.User>(request);
             userEntity.PasswordHash = passwordHash;
             userEntity.PasswordSalt = passwordSalt;
-            userEntity.RoleId = AppConstant.Customer;
+            userEntity.RoleId = (int)UserRole.Customer;
             await _unitOfWork.UserRepository.Add(userEntity);
             var customerEntity = _mapper.Map<Customer>(userEntity); 
             customerEntity.User = userEntity;
@@ -159,18 +187,11 @@ namespace TaxiBookingService.Logic.User
 
         public async Task<int> BookRide(CustomerBookRideDto request)
         {
-
             var customer = await GetCustomerFromToken();
             var PickupLocation = await GetGeocoding(request.PickupLocation);
             var DropoffLocation = await GetGeocoding(request.DropoffLocation);
-            var taxitype=await _unitOfWork.TaxiTypeRepository.GetByName(request.TaxiType);
-
-            if (taxitype == null)
-            {
-                throw new NotFoundException(AppConstant.TaxiTypeNotFound,_loggerAdapter);
-            }
-
             var fare = await _rideLogic.CalculateFare(PickupLocation,DropoffLocation);
+            await ValidateBooking(request, customer ,fare);
             var result = await _unitOfWork.RideRepository.BookRide(PickupLocation, DropoffLocation, request, customer.Id);
             await _unitOfWork.PaymentRepository.CreatePayment(result, request.PaymentType, fare + customer.PenaltyFee);
             var createdRide = await _unitOfWork.RideRepository.GetById(result);
@@ -188,8 +209,9 @@ namespace TaxiBookingService.Logic.User
             var driver = await _unitOfWork.DriverRepository.GetById(driverId);
             var rideStatus = await _unitOfWork.RideRepository.GetStatus(rideId);
             var existingRide = await GetExistingRide(rideId, customer.Id);
+            var cancellationReason = await _unitOfWork.RideCancellationReasonRepository.GetByName(reason); 
 
-            if (rideStatus == AppConstant.Accepted)
+            if (rideStatus == (int)Common.Enums.RideStatus.Accepted)
             {
                 bool isValidReason = await IsValidCancellationReason(reason);
 
@@ -199,15 +221,16 @@ namespace TaxiBookingService.Logic.User
                     customer.PenaltyFee += cancellationFee;
                     await _unitOfWork.CustomerRepository.Update(customer);
                 }
-                await UpdateStatus(existingRide, driver);
+
+                await UpdateStatus(existingRide, driver, cancellationReason?.Id);
             }
-            else if (rideStatus == AppConstant.Searching)
+            else if (rideStatus == (int)Common.Enums.RideStatus.Searching)
             {
-                await UpdateStatus(existingRide, driver);
+                await UpdateStatus(existingRide, driver, cancellationReason?.Id);
             }
             else
             {
-                throw new CannotCancel(AppConstant.CannotCancel, _loggerAdapter);
+                throw new CannotCancelException(AppConstant.CannotCancel, _loggerAdapter);
             }
 
             return AppConstant.CustomerCancelled;
@@ -231,18 +254,25 @@ namespace TaxiBookingService.Logic.User
             }
         }
 
-        public async Task<string> FeedBack(CustomerRatingDto Feedback)
+        public async Task<string> FeedBack(CustomerRatingDto request)
         {
-            var ride = await _unitOfWork.RideRepository.Exists(Feedback.RideId);
+            var ride = await _unitOfWork.RideRepository.Exists(request.RideId);
 
             if (!ride)
             {
                 throw new NotFoundException(AppConstant.RideNotFound, _loggerAdapter);
             }
 
-            var feedback = _mapper.Map<CustomerRating>(Feedback);
+            var rideStatus = await _unitOfWork.RideRepository.GetStatus(request.RideId);
+
+            if (rideStatus != (int)Common.Enums.RideStatus.Completed)
+            {
+                throw new RideNotCompletedException(AppConstant.RideNotCompleted,_loggerAdapter);
+            }
+
+            var feedback = _mapper.Map<CustomerRating>(request);
             await _unitOfWork.CustomerRatingRepository.Add(feedback);
-            var driverId = await _unitOfWork.RideRepository.GetDriverByRideId(Feedback.RideId);
+            var driverId = await _unitOfWork.RideRepository.GetDriverByRideId(request.RideId);
             await UpdateDriverRating(driverId);
             await _unitOfWork.SaveChangesAsync();
             return AppConstant.Feedback;
@@ -255,7 +285,7 @@ namespace TaxiBookingService.Logic.User
 
             if (rides.Count == 0)
             {
-                throw new NotFoundException(AppConstant.Notrides, _loggerAdapter);
+                throw new NotFoundException(AppConstant.Norides, _loggerAdapter);
             }
 
             var rideHistoryDtoList = new List<CustomerRideDisplayDto>();
@@ -275,11 +305,17 @@ namespace TaxiBookingService.Logic.User
         {
             var newDropoffLocation = await GetGeocoding(request.DropOffLocation);
             var existingRide = await _unitOfWork.RideRepository.GetById(request.RideId);
+
+            if (existingRide == null) 
+            { 
+                throw new NotFoundException(AppConstant.RideNotFound, _loggerAdapter);
+            }
+
             var existingPayment = await _unitOfWork.PaymentRepository.GetByRide(request.RideId);
 
-            if (existingRide.Id == AppConstant.RideCompleted)
+            if (existingRide.Id == (int)Common.Enums.RideStatus.Completed)
             {
-                throw new CannotUpdateDropOff(AppConstant.CannotUpdateDropOff,_loggerAdapter);
+                throw new CannotUpdateDropOffExecption(AppConstant.CannotUpdateDropOff,_loggerAdapter);
             }
 
             var existingDropoffLocation = existingRide.DropoffLocation;
@@ -294,9 +330,15 @@ namespace TaxiBookingService.Logic.User
 
         public async Task<string> TopUpWallet(int amount)
         {
+            if (amount < 0) 
+            {
+                throw new InvalidTopUpAmountException(AppConstant.InvalidTopUpAmount,_loggerAdapter);
+            }
+
             var customer = await GetCustomerFromToken();
-            customer.Customerwallet = amount;
+            customer.Customerwallet+= amount;
             await _unitOfWork.CustomerRepository.Update(customer);
+            await _unitOfWork.SaveChangesAsync();
             return AppConstant.AmountAdded;
         }
 
@@ -310,14 +352,14 @@ namespace TaxiBookingService.Logic.User
             return AppConstant.AddedContacts;
         }
 
-        public async Task<DriverDisplayDto> GetMatchedDriver(int rideId)
+        public async Task<DriverDisplayDto> GetAllocatedDriver(int rideId)
         {
             var customer = await GetCustomerFromToken();
             var existingRide = await GetExistingRide(rideId, customer.Id);
 
-            if (existingRide.RideStatusId == AppConstant.Searching)
+            if (existingRide.RideStatusId == (int)Common.Enums.RideStatus.Searching)
             {
-                throw new NomatchesFound(AppConstant.Nomatching,_loggerAdapter);
+                throw new Exception(AppConstant.DriverNotAllocated);
             }
 
             var user = await _unitOfWork.UserRepository.GetByDriverId(existingRide.DriverId.Value);
@@ -336,19 +378,19 @@ namespace TaxiBookingService.Logic.User
             var paymentMethod = existingPayment.PaymentMethod;
             if (paymentMethod.Name == AppConstant.Wallet)
             {
-                if (existingRide.RideStatusId == AppConstant.Started|| existingRide.RideStatusId == AppConstant.RideCompleted)
+                if (existingRide.RideStatusId == (int)Common.Enums.RideStatus.Started || existingRide.RideStatusId == (int)Common.Enums.RideStatus.Completed)
                 {
                     var estimatedFare = existingPayment.TotalFareAmount;
                     customer.Customerwallet -= estimatedFare;
                     customer.PenaltyFee = 0;
-                    existingPayment.PaymentStatusId = AppConstant.Completed;
+                    existingPayment.PaymentStatusId = (int)Common.Enums.PaymentStatus.Completed;
                     await _unitOfWork.CustomerRepository.Update(customer);
                     await _unitOfWork.PaymentRepository.Update(existingPayment);
                     await _unitOfWork.SaveChangesAsync();
                 }
                 else
                 {
-                    throw new NotStarted(AppConstant.RideNotStarted, _loggerAdapter);
+                    throw new NotStartedException(AppConstant.RideNotStarted, _loggerAdapter);
                 }
                 return AppConstant.PaymentSuccess;
             }
@@ -365,7 +407,7 @@ namespace TaxiBookingService.Logic.User
             var existingRide = await GetExistingRide(request.rideId, customer.Id);
             var exisitingPayment = existingRide.Payment;
 
-            if (existingRide.RideStatusId == AppConstant.RideCompleted)
+            if (existingRide.RideStatusId == (int)Common.Enums.RideStatus.Completed)
             {
                 throw new InvalidOperationException(AppConstant.CannotAddStopLocation);
             }
@@ -386,7 +428,7 @@ namespace TaxiBookingService.Logic.User
             var existingRide = await GetExistingRide(rideId, customer.Id);
             var exisitingPayment = existingRide.Payment;
 
-            if (existingRide.RideStatusId == AppConstant.RideCompleted)
+            if (existingRide.RideStatusId == (int)Common.Enums.RideStatus.Completed)
             {
                 throw new InvalidOperationException(AppConstant.CannotDeleteStopLocation);
             }
@@ -398,6 +440,42 @@ namespace TaxiBookingService.Logic.User
             await _unitOfWork.PaymentRepository.Update(exisitingPayment);
             await _unitOfWork.SaveChangesAsync();
             return AppConstant.StopLocationDelete;
+        }
+
+        public async Task<int> ScheduleRide(CustomerBookRideDto request)
+        {
+
+            var customer = await GetCustomerFromToken();
+            var PickupLocation = await GetGeocoding(request.PickupLocation);
+            var DropoffLocation = await GetGeocoding(request.DropoffLocation);
+            var taxitype = await _unitOfWork.TaxiTypeRepository.GetByName(request.TaxiType);
+
+            if (taxitype == null)
+            {
+                throw new NotFoundException(AppConstant.TaxiTypeNotFound, _loggerAdapter);
+            }
+
+            var fare = await _rideLogic.CalculateFare(PickupLocation, DropoffLocation);
+            var result = await _unitOfWork.RideRepository.BookRide(PickupLocation, DropoffLocation, request, customer.Id);
+            await _unitOfWork.PaymentRepository.CreatePayment(result, request.PaymentType, fare + customer.PenaltyFee);
+
+            if(!request.ScheduledDate.HasValue) 
+            {
+                throw new ScheduleDateNotProvidedException(AppConstant.ScheduleDate,_loggerAdapter);
+            }
+
+            await _unitOfWork.ScheduleRideRepository.CreateScheduleRide(result, request.ScheduledDate.Value);
+            var createdRide = await _unitOfWork.RideRepository.GetById(result);
+            createdRide.VerificationPin = GenerateVerificationPin();
+            await _unitOfWork.RideRepository.Update(createdRide);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
+        }
+
+        public async Task<List<ScheduledRide>> GetAllActiveSchedulerides()
+        {
+            var result=await _unitOfWork.ScheduleRideRepository.GetAllActiveSchedulerides();
+            return result;
         }
     }
 }

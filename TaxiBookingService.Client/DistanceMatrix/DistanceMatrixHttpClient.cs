@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
-using TaxiBookingService.Client.DistanceMatrix.Interfaces;
+using TaxiBookingService.Client.Interfaces;
 using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Client.DistanceMatrix

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Utilities;
-using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Logic.User.Interfaces;
 using static TaxiBookingService.Common.CustomException;
 
@@ -32,13 +31,13 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{AppConstant.RegistrationSuccess} id: {userId}") ;
                 return Ok($"{AppConstant.RegistrationSuccess} id: {userId}");
             }
-            catch (EmailAlreadyExists ex)
+            catch (EmailAlreadyExistsExecption ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.EmailAlreadyExists}");
+                return Conflict($"{ex.Message} ");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
+                _logger.LogError($"{ex.Message}", ex);
                 return BadRequest();
             }
         }
@@ -55,7 +54,7 @@ namespace TaxiBookingService.Controller.User
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
+                _logger.LogError($"{ex.Message}", ex);
                 return BadRequest();
             }
         }
@@ -70,14 +69,18 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{result} rideid: {rideId}");
                 return Ok($"{result} rideid: {rideId}");
             }
-            catch(InvalidOperationException ex)
+            catch (NotFoundException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.DriverNotAssignedToRide}");
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict($"{ex.Message} ");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -91,14 +94,18 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{result} rideid: {rideId}");
                 return Ok($"{result} rideid: {rideId}");
             }
-            catch (RideAlreadyAccepted ex)
+            catch (NotFoundException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.RideAlreadyAccepted}");
+                return NotFound(ex.Message);
+            }
+            catch (RideAlreadyAcceptedExecption ex)
+            {
+                return Conflict($"{ex.Message} ");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -112,18 +119,22 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{result} rideid: {rideId}");
                 return Ok($"{result} rideid: {rideId}");
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
             catch (InvalidOperationException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.DriverNotAssignedToRide}");
+                return Conflict($"{ex.Message}");
             }
-            catch (InvalidverificationPin ex)
+            catch (InvalidverificationPinExecption ex)
             {
-                return BadRequest($"{ex.Message} {AppConstant.InvalidverificationPin}");
+                return BadRequest($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -137,18 +148,22 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation(result);
                 return Ok(result);
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
             catch (InvalidOperationException ex)
             {
-                return Conflict(AppConstant.DriverNotAssignedToRide);
+                return Conflict(ex.Message);
             }
-            catch(PaymentNotCompleted ex)
+            catch(PaymentNotCompletedExecption ex)
             {
-                return StatusCode(AppConstant.PaymentRequired, AppConstant.PaymentNotCompleted);
+                return StatusCode(AppConstant.PaymentRequired);
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -162,20 +177,24 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{result} rideid: {rideId}");
                 return Ok($"{result} rideid: {rideId}");
             }
-            catch(CannotCancel ex)
+            catch (NotFoundException ex)
             {
-                return NotFound($"{ex.Message} {AppConstant.CannotCancel}");
+                return NotFound(ex.Message);
+            }
+            catch (CannotCancelException ex)
+            {
+                return NotFound($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
 
         [Authorize(Roles = "Driver")]
-        [HttpPost("rides/{rideId}/rating")]
+        [HttpPost("rides/{rideId}/feedback")]
         public async Task<IActionResult> FeedBack(DriverRatingDto request)
         {
             try
@@ -184,14 +203,19 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{result} rideid: {request.RideId}");
                 return Ok(result);
             }
+
             catch (NotFoundException ex)
             {
-                return NotFound($"{ex.Message} {AppConstant.RideNotFound}");
+                return NotFound($"{ex.Message} ");
+            }
+            catch (RideNotCompletedException ex)
+            {
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -206,14 +230,35 @@ namespace TaxiBookingService.Controller.User
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{ex.Message} {AppConstant.NoridesFound}");
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
+
+        [Authorize(Roles = "Driver")]
+        [HttpGet("update-avaliability")]
+        public async Task<IActionResult> UpdateAvailiability()
+        {
+            try
+            {
+                var result = await _DriverLogic.UpdateAvailiability();
+                return Ok($"{AppConstant.Update} to {result}");
+            }
+            catch(CannotUpdateStatusExecption ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
+            }
+        }
+
 
         [Authorize(Roles = "Driver")]
         [HttpGet("rides/active")]
@@ -226,12 +271,12 @@ namespace TaxiBookingService.Controller.User
             }
             catch (NotFoundException ex)
             {
-                return NotFound($"{ex.Message} {AppConstant.NoridesFound}");
+                return NotFound($"{ex.Message} ");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -245,14 +290,18 @@ namespace TaxiBookingService.Controller.User
                 _logger.LogInformation($"{result} rideid: {rideId}");
                 return Ok($"{result} rideid: {rideId}");
             }
-            catch (NotStarted ex)
+            catch (NotFoundException ex)
             {
-                return Conflict($"{ex.Message} {AppConstant.DriverNotYetStarted}");
+                return NotFound(ex.Message);
+            }
+            catch (NotStartedException ex)
+            {
+                return Conflict($"{ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
     }

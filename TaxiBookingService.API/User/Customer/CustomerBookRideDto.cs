@@ -16,7 +16,7 @@ namespace TaxiBookingService.API.User.Customer
         public string PickupLocation { get; set; }
 
         [LocationValidation]
-        [DifferentLocation(nameof(PickupLocation), ErrorMessage = AppConstant.MismatchLocation)]
+        [DifferentLocation(nameof(PickupLocation), ErrorMessage = AppConstant.SameLocation)]
         public string DropoffLocation { get; set; }
 
         [RequiredValidation]
@@ -24,5 +24,8 @@ namespace TaxiBookingService.API.User.Customer
 
         [RequiredValidation]
         public string PaymentType { get; set; }
+
+        //[DateTimeValidation]
+        public DateTime? ScheduledDate { get; set; }
     }
 }

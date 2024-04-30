@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Admin;
+using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Logic.User.Interfaces
 {
@@ -14,5 +16,6 @@ namespace TaxiBookingService.Logic.User.Interfaces
         Task<int> UpdateCancellationReason(AdminManageReasonDto request,int Id);
         Task<bool> DeleteUser(int Id);
         Task<int> UpdateUser(AdminManageUserDto request, int Id);
+        Task<List<Ride>> GetCustomerRides(int Id, RideQueryParametersDto request);
     }
 }

@@ -25,7 +25,7 @@ namespace TaxiBookingService.Dal.Profiles.DriverMapping
             CreateMap<User, Driver>()
             .ForMember(dest => dest.Driverearnings, opt => opt.MapFrom(src => 0.00m))
             .ForMember(dest => dest.DriverRating, opt => opt.MapFrom(src => 0))
-            .ForMember(dest => dest.DriverStatusId, opt => opt.MapFrom(src => AppConstant.Available))
+            .ForMember(dest => dest.DriverStatusId, opt => opt.MapFrom(src => (int)Common.Enums.DriverStatus.Avaliable))
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id));
 
             CreateMap<DriverRegisterDto, Driver>()

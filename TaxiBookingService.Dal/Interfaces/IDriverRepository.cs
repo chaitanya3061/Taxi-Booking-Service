@@ -15,5 +15,6 @@ namespace TaxiBookingService.Dal.Interfaces
         Task<List<Driver>> GetAllDrivers();
         Task<Location> GetLongLat(int driverId);
         Task<List<Driver>> GetAllTaxiTypeDrivers(int rideId);
+        Task<Driver> GetByEmail(string email);
     }
 }

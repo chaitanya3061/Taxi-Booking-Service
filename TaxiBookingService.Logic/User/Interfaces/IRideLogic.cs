@@ -13,6 +13,7 @@ namespace TaxiBookingService.Logic.User.Interfaces
         Task<decimal> CalculateFare(Location pickUpLocation, Location dropOffLocation);
         Task<decimal> CalculateCancellationFee(int rideId);
         Task<decimal> CalculateFareWithStop(Location pickupLocation, Location stopLocation, Location dropoffLocation);
+        decimal GetCommissionRate(string chargeName, List<TariffCharge> tariffCharges);
 
     }
 }

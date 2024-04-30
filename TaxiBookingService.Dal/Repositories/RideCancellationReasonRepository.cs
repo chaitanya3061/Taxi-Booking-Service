@@ -1,9 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 
@@ -16,9 +11,16 @@ namespace TaxiBookingService.Dal.Repositories
         {
                     _context = context;
         }
+
         public async Task<List<RideCancellationReason>> GetAllValidReasons()
         {
             return await _context.RideCancellationReason.Where(r => r.IsValid ).ToListAsync();
+        }
+
+        public async Task<RideCancellationReason> GetByName(string name)
+        {
+            return await _context.RideCancellationReason
+                .FirstOrDefaultAsync(r => r.Name == name && !r.IsDeleted);
         }
     }
 }

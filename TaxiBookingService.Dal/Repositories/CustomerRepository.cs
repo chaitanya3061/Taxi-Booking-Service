@@ -26,5 +26,10 @@ namespace TaxiBookingService.Dal.Repositories
         {
             return await _context.Customer.Include(d => d.User).FirstOrDefaultAsync(d => d.User.RefreshToken == token);
         }
+
+        public async Task<Customer> GetByEmail(string email)
+        {
+            return await _context.Customer.Include(d => d.User).FirstOrDefaultAsync(d => d.User.Email == email);
+        }
     }
 }

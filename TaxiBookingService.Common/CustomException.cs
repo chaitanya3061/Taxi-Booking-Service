@@ -31,6 +31,7 @@ namespace TaxiBookingService.Common
                 loggerAdapter.LogInformation(message);
             }
         }
+
         public class NotFoundException : Exception
         {
             public NotFoundException(string message, ILoggerAdapter loggerAdapter) : base(message)
@@ -38,63 +39,58 @@ namespace TaxiBookingService.Common
                 loggerAdapter.LogInformation(message);
             }
         }
-        public class CannotCancel : Exception
+
+        public class CannotCancelException : Exception
         {
-            public CannotCancel(string message, ILoggerAdapter loggerAdapter) : base(message)
-            {
-                loggerAdapter.LogInformation(message);
-            }
-        }
-        public class EmailAlreadyExists : Exception
-        {
-            public EmailAlreadyExists(string message, ILoggerAdapter loggerAdapter) : base(message)
-            {
-                loggerAdapter.LogInformation(message);
-            }
-        }
-        public class NotStarted : Exception
-        {
-            public NotStarted(string message, ILoggerAdapter loggerAdapter) : base(message)
+            public CannotCancelException(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }
         }
 
-        public class NomatchesFound : Exception
+        public class EmailAlreadyExistsExecption : Exception
         {
-            public NomatchesFound(string message, ILoggerAdapter loggerAdapter) : base(message)
+            public EmailAlreadyExistsExecption(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }
         }
 
-        public class InvalidverificationPin : Exception
+        public class NotStartedException : Exception
         {
-            public InvalidverificationPin(string message, ILoggerAdapter loggerAdapter) : base(message)
+            public NotStartedException(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }
         }
 
-        public class CannotUpdateDropOff : Exception
+        public class InvalidverificationPinExecption : Exception
         {
-            public CannotUpdateDropOff(string message, ILoggerAdapter loggerAdapter) : base(message)
+            public InvalidverificationPinExecption(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }
         }
 
-        public class RideAlreadyAccepted : Exception
+        public class CannotUpdateDropOffExecption : Exception
         {
-            public RideAlreadyAccepted(string message, ILoggerAdapter loggerAdapter) : base(message)
+            public CannotUpdateDropOffExecption(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }
         }
 
-        public class PaymentNotCompleted : Exception
+        public class RideAlreadyAcceptedExecption : Exception
         {
-            public PaymentNotCompleted(string message, ILoggerAdapter loggerAdapter) : base(message)
+            public RideAlreadyAcceptedExecption(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class PaymentNotCompletedExecption : Exception
+        {
+            public PaymentNotCompletedExecption(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }
@@ -103,6 +99,54 @@ namespace TaxiBookingService.Common
         public class SameLocationException : Exception
         {
             public SameLocationException(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class RideNotCompletedException : Exception
+        {
+            public RideNotCompletedException(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class ScheduleDateNotProvidedException : Exception
+        {
+            public ScheduleDateNotProvidedException(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class CannotUpdateStatusExecption : Exception
+        {
+            public CannotUpdateStatusExecption(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class CustomerAlreadyInSearchRideException : Exception
+        {
+            public CustomerAlreadyInSearchRideException(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class InsufficientFundsException : Exception
+        {
+            public InsufficientFundsException(string message, ILoggerAdapter loggerAdapter) : base(message)
+            {
+                loggerAdapter.LogInformation(message);
+            }
+        }
+
+        public class InvalidTopUpAmountException : Exception
+        {
+            public InvalidTopUpAmountException(string message, ILoggerAdapter loggerAdapter) : base(message)
             {
                 loggerAdapter.LogInformation(message);
             }

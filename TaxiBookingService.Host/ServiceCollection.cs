@@ -5,9 +5,8 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
 using TaxiBookingService.Client.DistanceMatrix;
-using TaxiBookingService.Client.DistanceMatrix.Interfaces;
 using TaxiBookingService.Client.Geocoding;
-using TaxiBookingService.Client.Geocoding.Interfaces;
+using TaxiBookingService.Client.Interfaces;
 using TaxiBookingService.Common.Utilities;
 using TaxiBookingService.Dal;
 using TaxiBookingService.Dal.Entities;
@@ -15,6 +14,7 @@ using TaxiBookingService.Dal.Interfaces;
 using TaxiBookingService.Dal.Profiles.CustomerMapping;
 using TaxiBookingService.Dal.Profiles.DriverMapping;
 using TaxiBookingService.Dal.Repositories;
+using TaxiBookingService.Dal.RepositoriesFactory;
 using TaxiBookingService.Logic.User;
 using TaxiBookingService.Logic.User.Interfaces;
 
@@ -52,14 +52,12 @@ namespace TaxiBookingService.Host
             services.AddHttpContextAccessor();
             services.AddSingleton<ILoggerAdapter, SerilogAdapter>();
             services.AddTransient<IDriverLogic, DriverLogic>();
+            services.AddScoped<IRepositoryFactory, RepositoryFactory>();
             services.AddTransient<IUserLogic,UserLogic>();
-            services.AddTransient<IDriverRepository, DriverRepository>();
             services.AddTransient<IGeoCodingHttpClient, GeoCodingHttpClient>();
             services.AddTransient<IDistanceMatrixHttpClient, DistanceMatrixHttpClient>();
             services.AddTransient<ICustomerLogic, CustomerLogic>();
-            services.AddTransient<ICustomerRepository, CustomerRepository>();
             services.AddTransient<IAdminLogic, AdminLogic>();
-            services.AddTransient<IAdminRepository, AdminRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddTransient<IRideLogic, RideLogic>();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>

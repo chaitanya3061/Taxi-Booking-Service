@@ -25,6 +25,7 @@ namespace TaxiBookingService.Dal.Interfaces
         IUserRepository UserRepository { get; }
         IPaymentMethodRepository PaymentMethodRepository { get; }
         ITaxiTypeRepository TaxiTypeRepository { get; }
+        IScheduleRideRepository ScheduleRideRepository { get; }
         Task<int> SaveChangesAsync();
     }
 }

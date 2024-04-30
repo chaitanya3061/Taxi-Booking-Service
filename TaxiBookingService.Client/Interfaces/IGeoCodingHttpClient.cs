@@ -1,6 +1,6 @@
 ﻿using TaxiBookingService.Dal.Entities;
 
-namespace TaxiBookingService.Client.Geocoding.Interfaces
+namespace TaxiBookingService.Client.Interfaces
 {
     public interface IGeoCodingHttpClient
     {

@@ -52,5 +52,10 @@ namespace TaxiBookingService.Dal.Repositories
             drivers = drivers.Where(x => x.DriverStatusId == 1).ToList();
             return drivers;
         }
+
+        public async Task<Driver> GetByEmail(string email)
+        {
+            return await _context.Driver.Include(d => d.User).FirstOrDefaultAsync(d => d.User.Email == email);
+        }
     }
 }

@@ -29,17 +29,20 @@ namespace TaxiBookingService.Controller.User
                 Console.Write(UserRole.Driver);
                 var accessToken = await _UserLogic.Login(request); 
                _logger.LogInformation($"{AppConstant.LoginSuccess} {request.Email}");
-                return Ok(accessToken);
-
+                return Ok($"{accessToken}");
+            }
+            catch(NotFoundException ex)
+            {
+                return NotFound(ex.Message);
             }
             catch (Common.CustomException.AuthenticationException ex)
             {
-                return Unauthorized($"{AppConstant.Error}: {ex.Message}");
+                return Unauthorized($"{ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{AppConstant.Error}:{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                _logger.LogError($"{ex.Message}", ex);
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
 
@@ -63,7 +66,7 @@ namespace TaxiBookingService.Controller.User
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
 
         }
@@ -80,7 +83,7 @@ namespace TaxiBookingService.Controller.User
             catch (Exception ex)
             {
                 _logger.LogError($"{AppConstant.Error}{ex.Message}", ex);
-                return StatusCode((int)AppConstant.ServerError, $"{AppConstant.Error}: {ex.Message}");
+                return StatusCode((int)AppConstant.ServerError, $" {ex.Message}");
             }
         }
     }

@@ -16,7 +16,7 @@ namespace TaxiBookingService.API.User.Customer
         public string PickupLocation { get; set; }
 
         [LocationValidation]
-        [Compare(nameof(PickupLocation), ErrorMessage = AppConstant.MismatchLocation)]
+        [Compare(nameof(PickupLocation), ErrorMessage = AppConstant.SameLocation)]
         public string DropoffLocation { get; set; }
 
         [RequiredValidation]
