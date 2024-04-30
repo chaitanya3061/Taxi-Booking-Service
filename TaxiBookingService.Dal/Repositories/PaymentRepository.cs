@@ -1,11 +1,4 @@
-﻿using Azure.Core;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.API.User.Customer;
+﻿using Microsoft.EntityFrameworkCore;
 using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 

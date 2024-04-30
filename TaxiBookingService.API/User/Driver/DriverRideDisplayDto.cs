@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace TaxiBookingService.API.User.Driver
 {
     public class DriverRideDisplayDto
@@ -16,5 +11,6 @@ namespace TaxiBookingService.API.User.Driver
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public decimal Amount { get; set; }
+        public String EstimatedTimeArrival {  get; set; }
     }
 }

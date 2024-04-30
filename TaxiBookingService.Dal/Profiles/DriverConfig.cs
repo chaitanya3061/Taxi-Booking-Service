@@ -1,12 +1,5 @@
 ﻿using AutoMapper;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.API.User.Customer;
 using TaxiBookingService.API.User.Driver;
-using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Profiles.DriverMapping
@@ -25,7 +18,7 @@ namespace TaxiBookingService.Dal.Profiles.DriverMapping
             CreateMap<User, Driver>()
             .ForMember(dest => dest.Driverearnings, opt => opt.MapFrom(src => 0.00m))
             .ForMember(dest => dest.DriverRating, opt => opt.MapFrom(src => 0))
-            .ForMember(dest => dest.DriverStatusId, opt => opt.MapFrom(src => (int)Common.Enums.DriverStatus.Avaliable))
+            .ForMember(dest => dest.DriverStatusId, opt => opt.MapFrom(src => (int)Common.Enums.DriverStatus.Available))
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id));
 
             CreateMap<DriverRegisterDto, Driver>()

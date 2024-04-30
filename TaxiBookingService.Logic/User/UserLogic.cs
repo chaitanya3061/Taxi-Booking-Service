@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -36,10 +35,12 @@ namespace TaxiBookingService.Logic.User
         {
             var loggedInUser = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
             var user = await _unitOfWork.UserRepository.GetByToken(loggedInUser);
+
             if (user == null)
             {
                 throw new NotFoundException(AppConstant.UserNotFound, _loggerAdapter);
             }
+
             return user;
         }
 
@@ -64,15 +65,6 @@ namespace TaxiBookingService.Logic.User
             };
         }
 
-        public async Task Logout()
-        {
-            var user = await GetUserFromToken();
-            await _unitOfWork.UserRepository.Logout(user);
-            await _unitOfWork.SaveChangesAsync();
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete("refreshToken");
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken");
-        }
-
         private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512(passwordSalt))
@@ -84,7 +76,7 @@ namespace TaxiBookingService.Logic.User
 
         private string CreateToken(Dal.Entities.User user)
         {
-            var role=_unitOfWork.UserRepository.GetRoleById(user.Id).Result;
+            var role = _unitOfWork.UserRepository.GetRoleById(user.Id).Result;
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Email, user.Email),
@@ -103,14 +95,25 @@ namespace TaxiBookingService.Logic.User
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        public async Task Logout()
+        {
+            var user = await GetUserFromToken();
+            await _unitOfWork.UserRepository.Logout(user);
+            await _unitOfWork.SaveChangesAsync();
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete("refreshToken");
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken");
+        }
+
         public async Task<string> RefreshToken()
         {
             var refreshToken = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
             var user = await GetUserFromToken();
+
             if (user.TokenExpires <= DateTime.Now)
             {
                 throw new TokenExpiredException(AppConstant.TokenExpired, _loggerAdapter);
             }
+
             string token = CreateToken(user);
             _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);
             var newRefreshToken = GenerateRefreshToken();
@@ -122,6 +125,7 @@ namespace TaxiBookingService.Logic.User
         public async Task<string> Login(UserLoginDto request)
         {
             var user = await _unitOfWork.UserRepository.GetByEmail(request.Email);
+
             if (user == null)
             {
                 throw new NotFoundException(AppConstant.UserNotFound,_loggerAdapter);
@@ -130,6 +134,7 @@ namespace TaxiBookingService.Logic.User
             {
                 throw new AuthenticationException(AppConstant.WrongPassword, _loggerAdapter);
             }
+
             await _unitOfWork.UserRepository.Login(user);
             string token = CreateToken(user);
             _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token);

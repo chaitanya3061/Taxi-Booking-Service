@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.User.Driver
@@ -15,6 +11,7 @@ namespace TaxiBookingService.API.User.Driver
 
         public string Feedback { get; set; }
 
+        [Range(1, 5, ErrorMessage = AppConstant.Rating)]
         public float Rating { get; set; }
     }
 }

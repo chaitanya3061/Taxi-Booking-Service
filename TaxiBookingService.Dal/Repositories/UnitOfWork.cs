@@ -63,13 +63,6 @@
 //    }
 
 //}
-using AutoMapper;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Dal.Interfaces;
 using TaxiBookingService.Dal.RepositoriesFactory;
 

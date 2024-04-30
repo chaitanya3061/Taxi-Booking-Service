@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using TaxiBookingService.Common.AssetManagement.Common;
 
@@ -13,7 +13,12 @@ namespace TaxiBookingService.Common.Attributes
         }
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
-            if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
+            if (value == null)
+            {
+                return ValidationResult.Success;
+            }
+
+            if (string.IsNullOrWhiteSpace(value.ToString()))
             {
                 return new ValidationResult($"{validationContext.DisplayName} is required.");
             }
@@ -33,5 +38,4 @@ namespace TaxiBookingService.Common.Attributes
             return ValidationResult.Success;
         }
     }
-
 }

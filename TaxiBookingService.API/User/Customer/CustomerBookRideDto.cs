@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net.Mail;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.Common.AssetManagement.Common;
+﻿using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.User.Customer
@@ -25,7 +18,7 @@ namespace TaxiBookingService.API.User.Customer
         [RequiredValidation]
         public string PaymentType { get; set; }
 
-        //[DateTimeValidation]
+        [DateTimeValidation]
         public DateTime? ScheduledDate { get; set; }
     }
 }

@@ -1,13 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using System.Security.Authentication;
 using TaxiBookingService.API.User.Customer;
-using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Utilities;
-using TaxiBookingService.Dal.Entities;
-using TaxiBookingService.Logic.User;
 using TaxiBookingService.Logic.User.Interfaces;
 using static TaxiBookingService.Common.CustomException;
 

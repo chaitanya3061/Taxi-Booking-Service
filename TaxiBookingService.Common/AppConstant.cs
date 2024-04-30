@@ -5,7 +5,7 @@ namespace TaxiBookingService.Common
     {
         public class AppConstant
         {
-            public const string CannotCancel = "Ride has already started. Cannot cancel ride.";
+            public const string CannotCancel = "Cannot cancel ride.";
             public const string RideAccepted = " Ride has been accepeted successfully";
             public const string RequestSent = "Request sent successfull";
             public const string ReasonAdded = "Reason Added successfully";
@@ -90,6 +90,10 @@ namespace TaxiBookingService.Common
             public const string InvalidTopUpAmount = "Top-up amount must be positive.";
             public const string IncorrectAddess = "No results found for the provided address.";
             public const string ErrorMessage = "Failed to retrieve data. Status code";
+            public const string RideStatusNotSearching = "Ride status must be 'Searching' in order to accept the ride.";
+            public const string Rating= "Rating must be between 1 and 5.";
+            public const string PaymentNotFound = "Payment not found";
+
         }
     }
 }

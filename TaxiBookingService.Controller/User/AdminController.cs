@@ -1,12 +1,9 @@
-﻿using Azure.Core;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TaxiBookingService.API.Ride;
 using TaxiBookingService.API.User.Admin;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Common.Utilities;
-using TaxiBookingService.Dal.Entities;
 using TaxiBookingService.Logic.User.Interfaces;
 using static TaxiBookingService.Common.CustomException;
 

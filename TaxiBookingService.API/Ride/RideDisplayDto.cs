@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net.Mail;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.Common.Attributes;
-
+﻿
 namespace TaxiBookingService.API.Ride
 {
     public class RideDisplayDto

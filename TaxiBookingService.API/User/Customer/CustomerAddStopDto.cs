@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.Common.AssetManagement.Common;
-using TaxiBookingService.Common.Attributes;
+﻿using TaxiBookingService.Common.Attributes;
 
 namespace TaxiBookingService.API.User.Customer
 {

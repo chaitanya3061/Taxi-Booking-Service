@@ -1,10 +1,4 @@
-﻿using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaxiBookingService.Common.Utilities;
+﻿using TaxiBookingService.Common.Utilities;
 
 namespace TaxiBookingService.Common
 {

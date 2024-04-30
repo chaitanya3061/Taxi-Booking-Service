@@ -1,11 +1,5 @@
-﻿using AutoMapper.Configuration;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using TaxiBookingService.Common.AssetManagement.Common;
 
 namespace TaxiBookingService.Common.Attributes

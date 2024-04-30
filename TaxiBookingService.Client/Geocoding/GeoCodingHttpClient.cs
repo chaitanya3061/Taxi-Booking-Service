@@ -1,7 +1,6 @@
 ﻿using TaxiBookingService.Client.Interfaces;
 using TaxiBookingService.Common.AssetManagement.Common;
 using TaxiBookingService.Dal.Entities;
-using static TaxiBookingService.Common.CustomException;
 
 namespace TaxiBookingService.Client.Geocoding
 {

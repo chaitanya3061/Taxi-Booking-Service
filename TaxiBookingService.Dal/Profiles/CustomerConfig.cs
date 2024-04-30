@@ -1,11 +1,5 @@
 ﻿using AutoMapper;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TaxiBookingService.API.User.Customer;
-using TaxiBookingService.API.User.Driver;
 using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal.Profiles.CustomerMapping
@@ -36,7 +30,9 @@ namespace TaxiBookingService.Dal.Profiles.CustomerMapping
             .ForMember(dest => dest.DropoffLocation, opt => opt.Ignore())
             .ForMember(dest => dest.PickupLocation, opt => opt.Ignore())
             .ForMember(dest => dest.TaxiType, opt => opt.MapFrom(src => src.TaxiType.Name))
-            .ForMember(dest => dest.Driver, opt => opt.MapFrom(src => src.Driver.User.Name));
+            .ForMember(dest => dest.Driver, opt => opt.MapFrom(src => src.Driver.User.Name))
+            .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Payment.TotalFareAmount));
+            ;
         }
     }
 }

@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 
 using System.Text;
 
-//using TaxiBookingService.Common.Enums;
 using TaxiBookingService.Dal.Entities;
 
 namespace TaxiBookingService.Dal
